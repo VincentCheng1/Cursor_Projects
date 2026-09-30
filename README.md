@@ -61,6 +61,10 @@ The core value is `calculateRecentSalesAverage` — the most recent **qualifying
 
 `MockTCGPlayerProvider` and `MockEbayProvider` load when `NODE_ENV=test` (Vitest) or when the dev server runs with `CARDVAULT_E2E=1` (Playwright). They never load in production.
 
+## Multi-card price tracker (Phase 12b)
+
+`/tracker` compares up to **8** COMBINED `PriceSnapshot` series on one Recharts overlay (`7D`–`ALL` ranges). Add cards by catalogue identity (card number, set, set type, foil, year) via `GET /api/cards/resolve`. Series persist in `TrackerSeries` (`GET/POST/PATCH/DELETE /api/tracker`, `GET /api/tracker/history`).
+
 ## End-to-end tests (Phase 18)
 
 Playwright starts `npm run dev` with `CARDVAULT_E2E=1` so mock providers are active. There is no public registration UI; `POST /api/e2e/seed` creates a credentials user (`e2e@cardvault.test`). `POST /api/e2e/pricing-expectations` returns the calculator oracle for assertions. Both routes return 404 without `CARDVAULT_E2E=1`.

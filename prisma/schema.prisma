@@ -61,6 +61,13 @@ enum SyncJobStatus {
   FAILED
 }
 
+/// Main vs promo set classification for tracker identity (spec §8 / §30b).
+enum SetType {
+  MAIN
+  PROMO
+  OTHER
+}
+
 // ---------------------------------------------------------------------------
 // Authentication
 // ---------------------------------------------------------------------------
@@ -81,6 +88,7 @@ model User {
   sessions        Session[]
   collectionItems CollectionItem[]
   watchlistItems  WatchlistItem[]
+  trackerSeries   TrackerSeries[]
 
   @@map("users")
 }
@@ -151,6 +159,7 @@ model CardSet {
   name        String
   code        String
   releaseDate DateTime?
+  setType     SetType   @default(MAIN)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -184,6 +193,7 @@ model Card {
   sales           Sale[]
   priceSnapshots  PriceSnapshot[]
   watchlistItems  WatchlistItem[]
+  trackerSeries   TrackerSeries[]
 
   @@unique([setId, cardNumber, name])
   @@index([name])
@@ -211,6 +221,7 @@ model CardVariant {
   sales           Sale[]
   priceSnapshots  PriceSnapshot[]
   watchlistItems  WatchlistItem[]
+  trackerSeries   TrackerSeries[]
 
   @@unique([cardId, variantName, printing, language])
   @@index([cardId])
@@ -263,6 +274,27 @@ model WatchlistItem {
   @@unique([userId, cardId, variantId])
   @@index([userId])
   @@map("watchlist_items")
+}
+
+/// User's multi-card price tracker workspace (spec §30b). Distinct from watchlist alerts.
+model TrackerSeries {
+  id         String   @id @default(cuid())
+  userId     String
+  cardId     String
+  variantId  String?
+  sortOrder  Int      @default(0)
+  colorIndex Int      @default(0)
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card    Card         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  variant CardVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, cardId, variantId])
+  @@index([userId])
+  @@map("tracker_series")
 }
 
 // ---------------------------------------------------------------------------

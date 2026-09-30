@@ -4,6 +4,7 @@ const links = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/collection", label: "Collection" },
   { href: "/search", label: "Search Cards" },
+  { href: "/tracker", label: "Tracker" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { href: "/dashboard", label: "Home" },
             { href: "/collection", label: "Collection" },
             { href: "/search", label: "Search" },
+            { href: "/tracker", label: "Tracker" },
             { href: "/settings", label: "Watchlist" },
           ].map((l) => (
             <Link key={l.href} href={l.href} className="px-2 py-1 text-zinc-400">

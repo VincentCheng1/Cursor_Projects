@@ -29,23 +29,25 @@ async function main() {
 
   const baseSet = await prisma.cardSet.upsert({
     where: { gameId_code: { gameId: pokemon.id, code: "base1" } },
-    update: {},
+    update: { setType: "MAIN" },
     create: {
       gameId: pokemon.id,
       name: "Base Set",
       code: "base1",
       releaseDate: new Date("1999-01-09"),
+      setType: "MAIN",
     },
   });
 
   const op01 = await prisma.cardSet.upsert({
     where: { gameId_code: { gameId: onePiece.id, code: "OP01" } },
-    update: {},
+    update: { setType: "MAIN" },
     create: {
       gameId: onePiece.id,
       name: "Romance Dawn",
       code: "OP01",
       releaseDate: new Date("2022-07-08"),
+      setType: "MAIN",
     },
   });
 
