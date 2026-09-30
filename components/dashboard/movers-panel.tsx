@@ -66,10 +66,12 @@ function MoverRows({
 
 function MoverWindowCard({
   title,
+  description,
   window,
   testId,
 }: {
   title: string;
+  description?: string;
   window: MoverWindow;
   testId: string;
 }) {
@@ -80,6 +82,7 @@ function MoverWindowCard({
       aria-label={title}
     >
       <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
+      {description ? <p className="mt-1 text-xs text-zinc-500">{description}</p> : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <h4 className="text-xs font-medium uppercase tracking-wide text-emerald-400/90">
@@ -215,9 +218,15 @@ export function MoversPanel() {
       )}
       {data && !error && (
         <div className="grid gap-4 lg:grid-cols-2" data-testid="movers-windows">
-          <MoverWindowCard title="Market movers" window={data.market} testId="market-movers" />
+          <MoverWindowCard
+            title="Observed market"
+            description="Cards with price history in this period — not the full TCG market."
+            window={data.market}
+            testId="market-movers"
+          />
           <MoverWindowCard
             title="Personal portfolio"
+            description="Your collection only, ranked by combined snapshot change."
             window={data.portfolio}
             testId="portfolio-movers"
           />
