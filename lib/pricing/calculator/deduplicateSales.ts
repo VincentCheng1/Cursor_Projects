@@ -5,18 +5,16 @@ import { normalizeCardNumber, normalizeText } from "../normalizer/text";
 import type { Sale } from "../types/sale";
 
 /**
- * Stable duplicate key for a sale (spec §17).
+ * Source-agnostic content fingerprint for a sale (spec §17 / §22).
  *
- * Preferred key is `source + externalSaleId`. When the source gives no id, a
- * fingerprint over source, card, sale date, sale price, listing title and
- * seller stands in — the same transaction surfacing twice produces the same
- * fingerprint, so it is only counted once.
+ * Omits `source` so the same completed transaction ingested from TCGplayer and
+ * eBay (same card, date, price, title, seller) collapses to one row in a pooled
+ * calculation. Marketplace ids are handled separately via `saleIdentityKeys`.
  */
 export function saleFingerprint(sale: Sale): string {
   const price = tryToDecimal(sale.salePrice);
 
   const parts = [
-    sale.source,
     sale.cardId ?? "",
     sale.variantId ?? "",
     normalizeText(sale.cardName) ?? "",
@@ -34,12 +32,35 @@ export function saleFingerprint(sale: Sale): string {
   return createHash("sha256").update(parts.join("\u0000")).digest("hex");
 }
 
-export function saleDuplicateKey(sale: Sale): string {
+/**
+ * Identity keys used for dedupe.
+ *
+ * - Content fingerprint (always) — catches the same transaction across sources.
+ * - `source + externalSaleId` when present — preferred within-source key (§17).
+ */
+export function saleIdentityKeys(sale: Sale): string[] {
+  const keys = [`fp::${saleFingerprint(sale)}`];
   const externalId = sale.externalSaleId?.trim();
   if (externalId !== undefined && externalId !== "") {
-    return `${sale.source}::id::${externalId}`;
+    keys.push(`${sale.source}::id::${externalId}`);
   }
-  return `${sale.source}::fp::${saleFingerprint(sale)}`;
+  return keys;
+}
+
+/** Primary display/debug key; prefers source+externalSaleId when available. */
+export function saleDuplicateKey(sale: Sale): string {
+  const keys = saleIdentityKeys(sale);
+  return keys[keys.length - 1] ?? keys[0]!;
+}
+
+function isDuplicateOfSeen(sale: Sale, seen: Set<string>): boolean {
+  return saleIdentityKeys(sale).some((key) => seen.has(key));
+}
+
+function markSeen(sale: Sale, seen: Set<string>): void {
+  for (const key of saleIdentityKeys(sale)) {
+    seen.add(key);
+  }
 }
 
 /**
@@ -53,9 +74,8 @@ export function deduplicateSales(sales: Sale[]): Sale[] {
   const unique: Sale[] = [];
 
   for (const sale of sales) {
-    const key = saleDuplicateKey(sale);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (isDuplicateOfSeen(sale, seen)) continue;
+    markSeen(sale, seen);
     unique.push(sale);
   }
 
@@ -69,12 +89,11 @@ export function partitionDuplicates(sales: Sale[]): { unique: Sale[]; duplicates
   const duplicates: Sale[] = [];
 
   for (const sale of sales) {
-    const key = saleDuplicateKey(sale);
-    if (seen.has(key)) {
+    if (isDuplicateOfSeen(sale, seen)) {
       duplicates.push(sale);
       continue;
     }
-    seen.add(key);
+    markSeen(sale, seen);
     unique.push(sale);
   }
 

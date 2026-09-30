@@ -22,6 +22,30 @@ function fieldMismatch(
 }
 
 /**
+ * Whether criteria are specific enough to price safely (spec §16).
+ *
+ * An empty or thin `match` would otherwise treat every unset field as "do not
+ * check" and average unrelated cards/conditions/grades. Callers must supply
+ * card identity plus condition and grading company, or the engine refuses.
+ */
+export function hasSufficientMatchCriteria(
+  criteria: SaleMatchCriteria | undefined,
+): boolean {
+  if (criteria === undefined) return false;
+  const want = normalizeSaleMatchCriteria(criteria);
+  const hasIdentity =
+    want.cardId !== undefined ||
+    (want.cardName !== undefined &&
+      (want.setName !== undefined || want.setCode !== undefined) &&
+      want.cardNumber !== undefined);
+  return (
+    hasIdentity &&
+    want.condition !== undefined &&
+    want.gradingCompany !== undefined
+  );
+}
+
+/**
  * Conservative sale-to-criteria comparison (spec §16).
  *
  * Every criterion field that is set must match; missing sale identity when a
@@ -78,8 +102,14 @@ export function matchSaleReason(
   }
 
   if (want.gradingCompany !== undefined) {
-    if (sale.gradingCompany === undefined) return "UNKNOWN_GRADING";
-    if (sale.gradingCompany !== want.gradingCompany) return "GRADING_MISMATCH";
+    // Missing grading on the sale is treated as raw/ungraded for RAW criteria
+    // (eBay rows often omit grading fields). Graded criteria still require an
+    // explicit company — undefined stays UNKNOWN_GRADING there.
+    if (sale.gradingCompany === undefined) {
+      if (want.gradingCompany !== "RAW") return "UNKNOWN_GRADING";
+    } else if (sale.gradingCompany !== want.gradingCompany) {
+      return "GRADING_MISMATCH";
+    }
   }
 
   if (want.grade !== undefined) {

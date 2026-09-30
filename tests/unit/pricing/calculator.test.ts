@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { calculateRecentSalesAverage } from "@/lib/pricing/calculator/calculateRecentSalesAverage";
 import { deduplicateSales, saleDuplicateKey } from "@/lib/pricing/calculator/deduplicateSales";
 import { filterQualifyingSales } from "@/lib/pricing/calculator/filterQualifyingSales";
+import { saleAmount } from "@/lib/pricing/calculator/saleAmount";
 import {
   calculateCollectionValue,
   calculateProfit,
@@ -11,14 +13,38 @@ import {
 import { normalizeCondition } from "@/lib/pricing/normalizer/normalizeCondition";
 import { normalizeCurrency } from "@/lib/pricing/normalizer/normalizeCurrency";
 import { toMoneyString } from "@/lib/pricing/money";
-import { makeSale } from "./fixtures";
-
+import { makeSale, TEST_NOW } from "./fixtures";
 describe("deduplicateSales", () => {
   it("keys on source + externalSaleId", () => {
     const a = makeSale({ externalSaleId: "x", salePrice: 1 });
     const b = { ...a };
     expect(deduplicateSales([a, b])).toHaveLength(1);
     expect(saleDuplicateKey(a)).toContain("TCGPLAYER");
+  });
+
+  it("collapses the same transaction across TCGPLAYER and EBAY (§22)", () => {
+    const shared = {
+      salePrice: 42.5,
+      saleDate: new Date("2026-09-15T12:00:00Z"),
+      listingTitle: "Charizard Holo 4/102 NM",
+      sellerName: "cardshop",
+      cardId: "card-1",
+      cardName: "charizard",
+      setName: "base set",
+      cardNumber: "4/102",
+      currency: "USD" as const,
+    };
+    const tcg = makeSale({
+      ...shared,
+      source: "TCGPLAYER",
+      externalSaleId: "tcg-txn-1",
+    });
+    const ebay = makeSale({
+      ...shared,
+      source: "EBAY",
+      externalSaleId: "ebay-item-9",
+    });
+    expect(deduplicateSales([tcg, ebay])).toHaveLength(1);
   });
 });
 
@@ -34,6 +60,62 @@ describe("filterQualifyingSales", () => {
     });
     expect(qualifying).toHaveLength(1);
   });
+
+  it("refuses empty match instead of averaging unrelated cards (§16)", () => {
+    const a = makeSale({
+      cardId: "card-a",
+      cardName: "charizard",
+      salePrice: 10,
+      externalSaleId: "a",
+    });
+    const b = makeSale({
+      cardId: "card-b",
+      cardName: "pikachu",
+      salePrice: 1000,
+      externalSaleId: "b",
+    });
+    const { qualifying, excluded } = filterQualifyingSales([a, b], {
+      currency: "USD",
+    });
+    expect(qualifying).toHaveLength(0);
+    expect(excluded.every((e) => e.reason === "INSUFFICIENT_MATCH_CRITERIA")).toBe(true);
+
+    const r = calculateRecentSalesAverage([a, b], 20, { currency: "USD", now: TEST_NOW });
+    expect(r.status).toBe("INSUFFICIENT_DATA");
+    expect(r.salesUsed).toBe(0);
+    expect(r.average).toBeNull();
+  });
+
+  it("includes sales with missing gradingCompany in a RAW match", () => {
+    const ebayRawShaped = makeSale({
+      source: "EBAY",
+      externalSaleId: "ebay-raw-1",
+      salePrice: 55,
+      gradingCompany: undefined,
+      grade: undefined,
+    });
+    const match = {
+      cardId: "card-1",
+      condition: "NEAR_MINT" as const,
+      gradingCompany: "RAW" as const,
+    };
+    const { qualifying, excluded } = filterQualifyingSales([ebayRawShaped], {
+      match,
+      currency: "USD",
+      now: TEST_NOW,
+    });
+    expect(qualifying).toHaveLength(1);
+    expect(excluded.some((e) => e.reason === "UNKNOWN_GRADING")).toBe(false);
+
+    const r = calculateRecentSalesAverage([ebayRawShaped], 20, {
+      match,
+      currency: "USD",
+      now: TEST_NOW,
+    });
+    expect(r.status).toBe("CALCULATED");
+    expect(r.salesUsed).toBe(1);
+    expect(r.average).toBe(55);
+  });
 });
 
 describe("normalizers", () => {
@@ -48,6 +130,29 @@ describe("normalizers", () => {
 describe("decimal precision", () => {
   it("rounds without float drift", () => {
     expect(toMoneyString("127.449999999")).toBe("127.45");
+  });
+});
+
+describe("saleAmount §19", () => {
+  it("adds shipping when totalPrice equals salePrice", () => {
+    const sale = makeSale({
+      salePrice: 100,
+      shippingPrice: 10,
+      totalPrice: 100,
+      externalSaleId: "ship-1",
+    });
+    expect(saleAmount(sale, "SALE_PLUS_SHIPPING")?.toFixed(2)).toBe("110.00");
+    expect(saleAmount(sale, "SALE_PRICE_ONLY")?.toFixed(2)).toBe("100.00");
+  });
+
+  it("does not double-count when totalPrice already includes shipping", () => {
+    const sale = makeSale({
+      salePrice: 100,
+      shippingPrice: 10,
+      totalPrice: 110,
+      externalSaleId: "ship-2",
+    });
+    expect(saleAmount(sale, "SALE_PLUS_SHIPPING")?.toFixed(2)).toBe("110.00");
   });
 });
 

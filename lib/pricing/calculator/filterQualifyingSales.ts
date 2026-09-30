@@ -3,7 +3,7 @@ import type { CurrencyCode } from "../types/currency";
 import type { ExcludedSale, ExclusionReason, PriceCalculationOptions } from "../types/calculation";
 import type { Sale } from "../types/sale";
 import { partitionDuplicates } from "./deduplicateSales";
-import { matchSaleReason } from "./matchSale";
+import { hasSufficientMatchCriteria, matchSaleReason } from "./matchSale";
 import { validateSale } from "./validateSale";
 
 export interface QualifyingSalesResult {
@@ -21,6 +21,17 @@ export function filterQualifyingSales(
   const now = options.now ?? new Date();
   const targetCurrency: CurrencyCode = options.currency ?? DEFAULT_CURRENCY;
   const match = options.match;
+
+  // Refuse rather than silently averaging an unscoped pool (spec §16).
+  if (!hasSufficientMatchCriteria(match)) {
+    return {
+      qualifying: [],
+      excluded: sales.map((sale) => ({
+        sale,
+        reason: "INSUFFICIENT_MATCH_CRITERIA" as const,
+      })),
+    };
+  }
 
   const excluded: ExcludedSale[] = [];
   const afterValid: Sale[] = [];
@@ -40,8 +51,7 @@ export function filterQualifyingSales(
   }
 
   const qualifying: Sale[] = [];
-
-  const criteria = match ?? {};
+  const criteria = match!;
 
   for (const sale of unique) {
     const reason = matchSaleReason(sale, criteria, targetCurrency);

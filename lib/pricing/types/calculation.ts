@@ -34,7 +34,9 @@ export type ExclusionReason =
   | "GRADE_MISMATCH"
   | "UNKNOWN_CONDITION"
   | "UNKNOWN_GRADING"
-  | "UNKNOWN_CARD";
+  | "UNKNOWN_CARD"
+  /** Calculation refused because match criteria were missing or too thin (§16). */
+  | "INSUFFICIENT_MATCH_CRITERIA";
 
 export interface ExcludedSale {
   sale: Sale;

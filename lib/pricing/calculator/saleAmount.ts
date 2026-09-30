@@ -11,12 +11,15 @@ import type { ShippingMode } from "../types/calculation";
  * so one average never mixes sale-only and sale-plus-shipping figures.
  *
  * - `SALE_PRICE_ONLY`    → salePrice
- * - `SALE_PLUS_SHIPPING` → the provider's totalPrice when it already includes
- *                          shipping, else salePrice + shippingPrice, else
- *                          salePrice when shipping is unknown.
+ * - `SALE_PLUS_SHIPPING` → salePrice + shippingPrice when shipping is known;
+ *                          a provider `totalPrice` is used only when it is at
+ *                          least sale+shipping (already inclusive). If
+ *                          `totalPrice === salePrice` but shipping is set, the
+ *                          total is treated as non-inclusive and shipping is
+ *                          added. When shipping is unknown, fall back to
+ *                          totalPrice (if ≥ salePrice) or salePrice.
  *
- * Shipping is never added twice: a `totalPrice` at or above `salePrice` is taken
- * as already inclusive and `shippingPrice` is not re-applied.
+ * Shipping is never added twice.
  */
 export function saleAmount(sale: Sale, mode: ShippingMode): Decimal | null {
   const salePrice = tryToDecimal(sale.salePrice);
@@ -25,12 +28,20 @@ export function saleAmount(sale: Sale, mode: ShippingMode): Decimal | null {
   if (mode === "SALE_PRICE_ONLY") return salePrice;
 
   const total = tryToDecimal(sale.totalPrice);
+  const shipping = tryToDecimal(sale.shippingPrice);
+
+  if (shipping !== null && !shipping.isNegative()) {
+    const salePlusShipping = salePrice.plus(shipping);
+    // Only trust total as inclusive when it covers sale + shipping.
+    if (total !== null && total.greaterThanOrEqualTo(salePlusShipping)) {
+      return total;
+    }
+    return salePlusShipping;
+  }
+
   if (total !== null && total.greaterThanOrEqualTo(salePrice)) {
     return total;
   }
 
-  const shipping = tryToDecimal(sale.shippingPrice);
-  if (shipping === null || shipping.isNegative()) return salePrice;
-
-  return salePrice.plus(shipping);
+  return salePrice;
 }
