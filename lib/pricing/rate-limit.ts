@@ -2,6 +2,9 @@ const lastRefresh = new Map<string, number>();
 
 const SINGLE_CARD_COOLDOWN_MS = Number(process.env.PRICE_REFRESH_COOLDOWN_MS ?? 60_000);
 const COLLECTION_COOLDOWN_MS = Number(process.env.COLLECTION_REFRESH_COOLDOWN_MS ?? 300_000);
+const PUBLIC_DATA_SYNC_COOLDOWN_MS = Number(
+  process.env.PUBLIC_DATA_SYNC_COOLDOWN_MS ?? 900_000,
+);
 
 export function assertRefreshAllowed(key: string, cooldownMs: number): void {
   const now = Date.now();
@@ -19,4 +22,9 @@ export function assertSingleCardRefreshAllowed(userId: string, cardId: string): 
 
 export function assertCollectionRefreshAllowed(userId: string): void {
   assertRefreshAllowed(`collection:${userId}`, COLLECTION_COOLDOWN_MS);
+}
+
+/** Admin “Run public data sync” control — never a scrape trigger (§45 / §14b). */
+export function assertPublicDataSyncAllowed(userId: string): void {
+  assertRefreshAllowed(`public-data:${userId}`, PUBLIC_DATA_SYNC_COOLDOWN_MS);
 }

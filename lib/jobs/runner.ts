@@ -11,6 +11,13 @@ import { calculateCardPriceJob } from "./handlers/calculate-card-price";
 import { refreshCollectionJob } from "./handlers/refresh-collection";
 import { snapshotPriceJob } from "./handlers/snapshot-price";
 import { syncCardSales } from "./handlers/sync-card-sales";
+import { syncEbayCatalogLinks } from "./handlers/sync-ebay-catalog-links";
+import { syncEbaySoldListings } from "./handlers/sync-ebay-sold-listings";
+import { syncEbayTaxonomy } from "./handlers/sync-ebay-taxonomy";
+import { syncPublicData } from "./handlers/sync-public-data";
+import { syncTcgplayerCategories } from "./handlers/sync-tcgplayer-categories";
+import { syncTcgplayerProducts } from "./handlers/sync-tcgplayer-products";
+import { syncTcgplayerSets } from "./handlers/sync-tcgplayer-sets";
 
 export interface RunJobInput {
   type: SyncJobType;
@@ -71,8 +78,22 @@ export async function runBackgroundJob(input: RunJobInput) {
           if (input.userId === undefined) throw new Error("userId required");
           return refreshCollectionJob(input.userId);
         }
+        case "SYNC_TCGPLAYER_CATEGORIES":
+          return syncTcgplayerCategories();
+        case "SYNC_TCGPLAYER_SETS":
+          return syncTcgplayerSets();
+        case "SYNC_TCGPLAYER_PRODUCTS":
+          return syncTcgplayerProducts();
+        case "SYNC_EBAY_TAXONOMY":
+          return syncEbayTaxonomy();
+        case "SYNC_EBAY_CATALOG_LINKS":
+          return syncEbayCatalogLinks();
+        case "SYNC_EBAY_SOLD_LISTINGS":
+          return syncEbaySoldListings();
+        case "SYNC_PUBLIC_DATA":
+          return syncPublicData();
         default:
-          throw new Error(`Unknown job type: ${input.type}`);
+          throw new Error(`Unknown job type: ${input.type satisfies never}`);
       }
     });
 

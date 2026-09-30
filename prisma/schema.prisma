@@ -52,6 +52,14 @@ enum SyncJobType {
   CALCULATE_CARD_PRICE
   SNAPSHOT_PRICE
   REFRESH_COLLECTION
+  /// Phase 13a — marketplace public catalog / sold-data surfaces (§14b / §32).
+  SYNC_TCGPLAYER_CATEGORIES
+  SYNC_TCGPLAYER_SETS
+  SYNC_TCGPLAYER_PRODUCTS
+  SYNC_EBAY_TAXONOMY
+  SYNC_EBAY_CATALOG_LINKS
+  SYNC_EBAY_SOLD_LISTINGS
+  SYNC_PUBLIC_DATA
 }
 
 enum SyncJobStatus {
@@ -397,4 +405,28 @@ model SyncJob {
   @@index([provider, type, createdAt])
   @@index([status])
   @@map("sync_jobs")
+}
+
+/// Coverage + pagination cursors for marketplace public-data ingest (spec §14b).
+model CatalogSyncWatermark {
+  id               String    @id @default(cuid())
+  /// Marketplace id, e.g. TCGPLAYER | EBAY.
+  provider         String
+  /// Surface key, e.g. categories | sets | products | taxonomy | catalog_links | sold_listings.
+  surface          String
+  /// Opaque pagination / incremental cursor when the API provides one.
+  cursor           String?
+  lastSuccessAt    DateTime?
+  lastErrorAt      DateTime?
+  lastErrorMessage String?
+  /// Rows successfully ingested on the last successful run of this surface.
+  rowCount         Int       @default(0)
+  /// Non-secret surface metadata (category ids, disable reason, coverage notes).
+  metadata         Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([provider, surface])
+  @@index([provider])
+  @@map("catalog_sync_watermarks")
 }

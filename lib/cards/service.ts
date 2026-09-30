@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/db/client";
+import { resolveCatalogSearchEmptyState } from "@/lib/catalog/status";
 
 import { buildCardSearchWhere } from "./search";
 import type { CardSearchInput } from "./schemas";
@@ -18,7 +19,13 @@ export async function searchCards(input: CardSearchInput) {
     }),
     getPrisma().card.count({ where }),
   ]);
-  return { items, total };
+
+  if (total === 0) {
+    const empty = await resolveCatalogSearchEmptyState();
+    return { items, total, empty };
+  }
+
+  return { items, total, empty: null };
 }
 
 export async function getCardById(id: string) {

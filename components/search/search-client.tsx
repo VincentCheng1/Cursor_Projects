@@ -12,9 +12,15 @@ type CardResult = {
   variants: { id: string; variantName: string }[];
 };
 
+type EmptyState = {
+  reason: "provider_unconfigured" | "catalog_not_synced" | "no_match";
+  message: string;
+} | null;
+
 export function SearchClient() {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<CardResult[]>([]);
+  const [empty, setEmpty] = useState<EmptyState>(null);
   const [loading, setLoading] = useState(false);
 
   async function search() {
@@ -23,6 +29,7 @@ export function SearchClient() {
     const res = await fetch(`/api/cards/search?q=${encodeURIComponent(q)}`);
     const json = await res.json();
     setResults(json.items ?? []);
+    setEmpty(json.empty ?? null);
     setLoading(false);
   }
 
@@ -43,6 +50,16 @@ export function SearchClient() {
       return;
     }
     if (res.ok) alert("Added to collection.");
+  }
+
+  function emptyMessage(): string {
+    if (empty?.reason === "provider_unconfigured") {
+      return empty.message;
+    }
+    if (empty?.reason === "catalog_not_synced") {
+      return empty.message;
+    }
+    return "No results. Try another query.";
   }
 
   return (
@@ -106,8 +123,8 @@ export function SearchClient() {
         ))}
       </ul>
       {!loading && q && results.length === 0 && (
-        <p className="text-sm text-zinc-500" role="status">
-          No results. Try another query or seed the catalog.
+        <p className="text-sm text-zinc-500" role="status" data-testid="search-empty-state">
+          {emptyMessage()}
         </p>
       )}
     </div>

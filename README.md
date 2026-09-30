@@ -83,6 +83,16 @@ Requires `DATABASE_URL` and `AUTH_SECRET` in `.env`, plus `prisma migrate deploy
 - **TCGplayer**: OAuth client credentials against the official API; sales history uses `/pricing/product/{id}/sales` or `TCGPLAYER_SALES_HISTORY_URL_TEMPLATE` when your credential tier provides a different authorized endpoint.
 - **eBay**: OAuth plus Finding API `findCompletedItems` with `SoldItemsOnly` — active listings are never used.
 
+### Public data ingest (Phase 13a)
+
+Authorized catalog APIs only — **never HTML scraping**. `CatalogProvider` implementations (`TCGPlayerCatalogProvider`, `EbayPublicDataProvider`) power:
+
+- `SYNC_TCGPLAYER_CATEGORIES` / `SETS` / `PRODUCTS` — exhaustive category → group → product → variant walk
+- `SYNC_EBAY_TAXONOMY` / `CATALOG_LINKS` / `SOLD_LISTINGS` — taxonomy leaves, EPID links, completed sales
+- `SYNC_PUBLIC_DATA` — orchestrates configured surfaces
+
+Admin **Run public data sync** lives on `/admin/diagnostics` (`POST /api/admin/public-data-sync`, rate-limited). Unconfigured surfaces disable cleanly; marketplace list/market prices stay reference-only and never replace the 20-sale calculated value. §22 pooled combined value is unchanged.
+
 ## Background jobs (Phase 15)
 
 Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
@@ -91,6 +101,7 @@ Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
 - `CALCULATE_CARD_PRICE` — run the engine (no snapshot)
 - `SNAPSHOT_PRICE` — refresh and write `PriceSnapshot` rows
 - `REFRESH_COLLECTION` — sync + snapshot for each collection item
+- Phase 13a catalog / public-data job types above (also via admin sync)
 
 `GET /api/sync/{jobId}` returns job status. `GET /api/sync/providers` shows provider health and last successful sync.
 
@@ -101,4 +112,4 @@ Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
 
 ## Security (Phase 17)
 
-Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `middleware.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed).
+Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `middleware.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed) include per-surface public-data coverage and the rate-limited sync control.
