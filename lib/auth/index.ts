@@ -11,6 +11,9 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Required for Auth.js against localhost when NODE_ENV=production (CI e2e).
+  // AUTH_URL / AUTH_TRUST_HOST also cover this; trustHost keeps next start usable.
+  trustHost: true,
   adapter: PrismaAdapter(getPrisma()),
   session: { strategy: "jwt" },
   providers: [

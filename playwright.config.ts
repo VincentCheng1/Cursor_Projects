@@ -25,6 +25,8 @@ export default defineConfig({
     env: {
       ...process.env,
       CARDVAULT_E2E: "1",
+      AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST ?? "true",
+      AUTH_URL: process.env.AUTH_URL ?? baseURL,
     },
   },
 });

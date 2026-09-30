@@ -22,8 +22,14 @@ describe("mock provider guard §41", () => {
     expect(() => assertMockProviderEnvironment()).toThrow(/test\/e2e/);
   });
 
-  it("allows CARDVAULT_E2E=1 when not production", () => {
+  it("allows CARDVAULT_E2E=1 in development", () => {
     vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CARDVAULT_E2E", "1");
+    expect(() => assertMockProviderEnvironment()).not.toThrow();
+  });
+
+  it("allows CARDVAULT_E2E=1 under production NODE_ENV (Playwright next start)", () => {
+    vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("CARDVAULT_E2E", "1");
     expect(() => assertMockProviderEnvironment()).not.toThrow();
   });
