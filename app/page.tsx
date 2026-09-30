@@ -24,7 +24,9 @@ export default function HomePage() {
             <li key={p.id} className="flex justify-between gap-4">
               <span>{p.displayName}</span>
               <span className="text-zinc-400">
-                {p.health.status === "NOT_CONFIGURED" ? p.health.message : p.health.status}
+                {p.health.status === "READY"
+                  ? "READY"
+                  : p.health.message}
               </span>
             </li>
           ))}

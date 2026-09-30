@@ -68,11 +68,16 @@ function healthLabel(health: { status: string; message?: string }) {
   if (health.status === "READY") return "Ready";
   if (health.status === "NOT_CONFIGURED") return health.message ?? "Not configured";
   if (health.status === "NEVER_SYNCED") return health.message ?? "Never synced";
+  if (health.status === "UNAVAILABLE") return health.message ?? "Unavailable";
   return health.message ?? health.status;
 }
 
 function providerLine(label: string, detail?: ProviderDetail) {
   if (!detail) return `${label}: —`;
+  // Prefer explicit price-provider health when sales are unavailable (e.g. TCGCSV).
+  if (detail.health.status === "UNAVAILABLE") {
+    return `${label}: ${healthLabel(detail.health)}`;
+  }
   const configured = detail.credentialsConfigured;
   if (configured === true) {
     return `${label}: Configured — ${detail.statusMessage ?? "Ready for authorized API calls."}`;

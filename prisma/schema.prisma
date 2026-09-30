@@ -223,6 +223,12 @@ model CardVariant {
   /// Optional override when print year differs from Set.releaseDate (spec §30b).
   /// Null → effective year falls back to the parent set's releaseDate year.
   printYear   Int?
+  /// Marketplace marketPrice (e.g. TCGCSV) — reference only; never §3 calculated value (§2).
+  referenceMarketPrice Decimal?  @db.Decimal(12, 2)
+  /// Marketplace midPrice / median listing — reference only (§2).
+  referenceMidPrice    Decimal?  @db.Decimal(12, 2)
+  /// When reference market/mid were last ingested from a public feed.
+  referencePriceAt     DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

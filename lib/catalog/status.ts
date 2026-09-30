@@ -1,5 +1,6 @@
 import { getPrisma } from "@/lib/db/client";
 import { ebayIsConfigured } from "@/lib/ebay/config";
+import { tcgcsvServesTcgplayerSlot } from "@/lib/tcgcsv/config";
 import { tcgplayerIsConfigured } from "@/lib/tcgplayer/config";
 
 import {
@@ -16,7 +17,8 @@ import type {
 import { listWatermarks } from "./watermark";
 
 function configured(provider: CatalogProviderId): boolean {
-  return provider === "TCGPLAYER" ? tcgplayerIsConfigured() : ebayIsConfigured();
+  if (provider === "EBAY") return ebayIsConfigured();
+  return tcgplayerIsConfigured() || tcgcsvServesTcgplayerSlot();
 }
 
 export async function listPublicDataSurfaceStatus(): Promise<PublicDataSurfaceStatus[]> {
@@ -103,14 +105,14 @@ export async function resolveCatalogSearchEmptyState(): Promise<{
   anySurfaceSynced: boolean;
 }> {
   const cardCount = await getPrisma().card.count();
-  const tcgReady = tcgplayerIsConfigured();
+  const tcgReady = tcgplayerIsConfigured() || tcgcsvServesTcgplayerSlot();
   const ebayReady = ebayIsConfigured();
 
   if (!tcgReady && !ebayReady) {
     return {
       reason: "provider_unconfigured",
       message:
-        "Marketplace public data providers are not configured. Catalog search only covers seeded games until credentials are set and sync runs.",
+        "Marketplace public data providers are not configured. Catalog search only covers seeded games until credentials (or CARDVAULT_PRICE_SOURCE=tcgcsv) are set and sync runs.",
       cardCount,
       anySurfaceSynced: false,
     };
@@ -123,7 +125,7 @@ export async function resolveCatalogSearchEmptyState(): Promise<{
     return {
       reason: "catalog_not_synced",
       message:
-        "Public catalog has not been synced yet. Run admin public data sync (authorized APIs only) to ingest marketplace cards.",
+        "Public catalog has not been synced yet. Run admin public data sync (authorized APIs / TCGCSV public feeds only) to ingest marketplace cards.",
       cardCount,
       anySurfaceSynced: false,
     };

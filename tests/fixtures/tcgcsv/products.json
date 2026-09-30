@@ -1,0 +1,31 @@
+{
+  "totalItems": 2,
+  "success": true,
+  "errors": [],
+  "results": [
+    {
+      "productId": 451396,
+      "name": "Lugia VSTAR",
+      "cleanName": "Lugia VSTAR",
+      "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/451396_200w.jpg",
+      "categoryId": 3,
+      "groupId": 3170,
+      "extendedData": [
+        { "name": "Number", "displayName": "Card Number", "value": "139/195" },
+        { "name": "Rarity", "displayName": "Rarity", "value": "Ultra Rare" }
+      ]
+    },
+    {
+      "productId": 451784,
+      "name": "Unidentified Fossil",
+      "cleanName": "Unidentified Fossil",
+      "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/451784_200w.jpg",
+      "categoryId": 3,
+      "groupId": 3170,
+      "extendedData": [
+        { "name": "Number", "displayName": "Card Number", "value": "165/195" },
+        { "name": "Rarity", "displayName": "Rarity", "value": "Uncommon" }
+      ]
+    }
+  ]
+}

@@ -33,7 +33,10 @@ export async function syncTcgplayerSets() {
   let processed = 0;
   let failed = 0;
   const errors: string[] = [];
-  const setIdMap: Record<string, { gameSlug: string; code: string; name: string }> = {};
+  const setIdMap: Record<
+    string,
+    { gameSlug: string; code: string; name: string; categoryId: string }
+  > = {};
 
   try {
     for (const category of categories) {
@@ -61,6 +64,7 @@ export async function syncTcgplayerSets() {
               gameSlug,
               code: set.code,
               name: set.name,
+              categoryId: category.id,
             };
             processed += 1;
           } catch (e) {

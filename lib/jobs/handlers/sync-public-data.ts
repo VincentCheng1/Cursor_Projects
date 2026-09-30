@@ -57,7 +57,7 @@ export async function syncPublicData(): Promise<JobOutcome> {
       processed: 0,
       failed: 0,
       errors: [
-        "No marketplace public data providers configured. Set TCGplayer and/or eBay credentials — HTML scraping is not available.",
+        "No marketplace public data providers configured. Set TCGplayer and/or eBay credentials, or enable CARDVAULT_PRICE_SOURCE=tcgcsv — HTML scraping is not available.",
       ],
     };
   }

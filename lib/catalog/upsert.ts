@@ -170,6 +170,15 @@ export async function upsertCatalogVariants(
     const variantName = variant.variantName.trim() || "Default";
     const printing = variant.printing ?? null;
     const language = variant.language?.trim() || "EN";
+    const hasReference =
+      variant.referenceMarketPrice !== undefined || variant.referenceMidPrice !== undefined;
+    const referenceData = hasReference
+      ? {
+          referenceMarketPrice: variant.referenceMarketPrice ?? null,
+          referenceMidPrice: variant.referenceMidPrice ?? null,
+          referencePriceAt: new Date(),
+        }
+      : {};
 
     // Compound unique with nullable printing: prefer find-then-write over upsert.
     const existing = await prisma.cardVariant.findFirst({
@@ -182,6 +191,7 @@ export async function upsertCatalogVariants(
           isFoil: variant.isFoil ?? false,
           isParallel: variant.isParallel ?? false,
           ...(variant.printYear !== undefined ? { printYear: variant.printYear } : {}),
+          ...referenceData,
         },
       });
       return;
@@ -195,6 +205,7 @@ export async function upsertCatalogVariants(
         isFoil: variant.isFoil ?? false,
         isParallel: variant.isParallel ?? false,
         printYear: variant.printYear ?? null,
+        ...referenceData,
       },
     });
   }

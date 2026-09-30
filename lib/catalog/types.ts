@@ -39,6 +39,12 @@ export interface CatalogVariant {
   isParallel?: boolean;
   /** Optional override when print year differs from set release (spec §30b). */
   printYear?: number | null;
+  /**
+   * Marketplace market/mid listing aggregates (e.g. TCGCSV) — reference only.
+   * Never used as CardVault §3 / §22 calculated value.
+   */
+  referenceMarketPrice?: number | null;
+  referenceMidPrice?: number | null;
 }
 
 export interface CatalogProduct {

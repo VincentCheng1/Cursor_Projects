@@ -9,11 +9,16 @@ import {
 import { getWatermark, markWatermarkError, markWatermarkSuccess } from "@/lib/catalog/watermark";
 import { ProviderNotConfiguredError } from "@/lib/pricing/providers/errors";
 
-type SetMeta = Record<string, { gameSlug: string; code: string; name: string }>;
+type SetMeta = Record<
+  string,
+  { gameSlug: string; code: string; name: string; categoryId?: string }
+>;
 
 /**
  * Exhausts all products + variants for synced TCGplayer sets (§14b).
  * Idempotent upserts; never invents cards outside API responses (§5).
+ * When the TCGPLAYER slot is served by TCGCSV, market/mid land on variants as
+ * reference-only fields — never as §3 / §22 completed-sale averages.
  */
 export async function syncTcgplayerProducts() {
   const provider = catalogProviders.TCGPLAYER;
@@ -52,6 +57,7 @@ export async function syncTcgplayerProducts() {
             gameSlug: category.gameSlug,
             code: set.code,
             name: set.name,
+            categoryId: category.id,
           };
         }
         if (page.nextOffset === null || page.nextOffset === undefined) break;
@@ -77,7 +83,7 @@ export async function syncTcgplayerProducts() {
         gameId,
         set: {
           externalSetId,
-          externalCategoryId: "",
+          externalCategoryId: info.categoryId ?? "",
           name: info.name,
           code: info.code,
           gameSlug: info.gameSlug,
@@ -88,6 +94,7 @@ export async function syncTcgplayerProducts() {
       for (;;) {
         const page = await provider.listProducts({
           setId: externalSetId,
+          categoryId: info.categoryId,
           gameSlug: info.gameSlug,
           offset,
           limit: 100,
