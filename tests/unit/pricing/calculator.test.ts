@@ -131,6 +131,17 @@ describe("normalizers", () => {
     expect(normalizeCondition("Good")).toBe("HEAVILY_PLAYED");
     expect(normalizeCondition("Acceptable")).toBe("HEAVILY_PLAYED");
   });
+  it("normalizeCondition maps eBay used-cascade and NM/M aliases", () => {
+    expect(normalizeCondition("Used - Like New")).toBe("NEAR_MINT");
+    expect(normalizeCondition("Used - Very Good")).toBe("MODERATELY_PLAYED");
+    expect(normalizeCondition("Used - Good")).toBe("HEAVILY_PLAYED");
+    expect(normalizeCondition("Used - Acceptable")).toBe("HEAVILY_PLAYED");
+    expect(normalizeCondition("NM/M")).toBe("NEAR_MINT");
+    expect(normalizeCondition("For parts or not working")).toBe("DAMAGED");
+    // Bare ambiguous labels stay excluded
+    expect(normalizeCondition("Used")).toBeUndefined();
+    expect(normalizeCondition("Played")).toBeUndefined();
+  });
   it("normalizeCurrency maps USD", () => {
     expect(normalizeCurrency("usd")).toBe("USD");
   });
@@ -237,6 +248,44 @@ describe("eBay listing attribution §16", () => {
         cardNumber: "4/102",
       }),
     ).toBe(false);
+  });
+
+  it("rejects name + set without card number when the catalog card has a number", () => {
+    expect(
+      listingConfirmsCardIdentity("Charizard Base Set Holo NM", {
+        cardName: "Charizard",
+        setName: "Base Set",
+        cardNumber: "4/102",
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects name + set when the title carries a conflicting card number", () => {
+    expect(
+      listingConfirmsCardIdentity("Charizard Base Set 58/102 NM", {
+        cardName: "Charizard",
+        setName: "Base Set",
+        cardNumber: "4/102",
+      }),
+    ).toBe(false);
+  });
+
+  it("allows name + set when the catalog card has no card number", () => {
+    expect(
+      listingConfirmsCardIdentity("Promo Charizard Base Set Holo NM", {
+        cardName: "Charizard",
+        setName: "Base Set",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not stamp variantId when only an id is requested without title phrases", () => {
+    const identity = ebayIdentityFromListing(
+      { title: "Charizard Base Set 4/102 NM" },
+      { ...CHARIZARD, variantId: "var-reverse-holo" },
+    );
+    expect(identity.cardId).toBe("card-charizard");
+    expect(identity.variantId).toBeUndefined();
   });
 
   it("does not stamp requested variant/printing when the title lacks evidence", () => {

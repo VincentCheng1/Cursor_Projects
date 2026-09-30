@@ -17,6 +17,7 @@ import {
 import { getCardById } from "@/lib/cards/service";
 import { computeCardPrice } from "@/lib/pricing/services/compute-card-price";
 import { getLatestPricesForCard } from "@/lib/pricing/services/latest-prices";
+import { snapshotTimestampMatchesLive } from "@/lib/pricing/services/live-vs-snapshot";
 import { getPriceHistory } from "@/lib/pricing/services/price-history";
 
 type PageProps = {
@@ -60,6 +61,9 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
 
   const live = identity !== null ? await computeCardPrice(identity) : null;
   const combined = live?.combined ?? null;
+  // Live compute is the card-page source of truth for value + salesUsed so the
+  // headline matches View Sales Used (pricing-pipeline P1). Collection /
+  // dashboard still read COMBINED snapshots until refresh.
   const displayValue = combined?.average ?? null;
   const displaySalesUsed = combined?.salesUsed ?? 0;
 
@@ -73,7 +77,18 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
           grade,
         })
       : null;
-  const lastUpdated = latest?.COMBINED?.calculatedAt ?? null;
+  const snapshot = latest?.COMBINED ?? null;
+  // Only attach snapshot "Last updated" when it describes the same number as
+  // the live headline — otherwise a stale timestamp next to a live value
+  // disagrees with collection/dashboard snapshot surfaces.
+  const lastUpdated = snapshotTimestampMatchesLive({
+    liveAverage: displayValue,
+    liveSalesUsed: displaySalesUsed,
+    snapshotAverage: snapshot?.averagePrice,
+    snapshotSalesUsed: snapshot?.salesUsed,
+  })
+    ? (snapshot?.calculatedAt ?? null)
+    : null;
 
   const history =
     identity !== null

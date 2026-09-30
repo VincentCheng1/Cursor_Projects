@@ -23,7 +23,14 @@ export async function computeCardPrice(
     orderBy: { saleDate: "desc" },
     take: DB_SALE_FETCH_LIMIT,
   });
-  const dbSales = rows.map(mapDbSaleToPricingSale);
+  // Pass catalog variant phrases so eBay DB rows can re-prove a stored
+  // variantId from the listing title (without inventing marketplace data).
+  const remapContext = {
+    variantId: identity.variant?.id,
+    variantName: identity.variant?.variantName,
+    printing: identity.variant?.printing ?? undefined,
+  };
+  const dbSales = rows.map((row) => mapDbSaleToPricingSale(row, remapContext));
 
   const cardIdentifier = {
     cardId: identity.card.id,

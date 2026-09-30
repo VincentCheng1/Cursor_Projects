@@ -39,6 +39,12 @@ function dbRow(overrides: Partial<DbSale>): DbSale {
   } as DbSale;
 }
 
+const REVERSE_HOLO = {
+  variantId: "var-reverse-holo",
+  variantName: "Reverse Holo",
+  printing: "Reverse Holo",
+};
+
 describe("mapDbSaleToPricingSale", () => {
   it("strips forged eBay identity when title does not confirm the stamped card", () => {
     const sale = mapDbSaleToPricingSale(
@@ -60,9 +66,47 @@ describe("mapDbSaleToPricingSale", () => {
         listingTitle: "Charizard Base Set 4/102 NM",
         variantId: "var-reverse-holo",
       }),
+      REVERSE_HOLO,
     );
     expect(sale.cardId).toBe("card-charizard");
     expect(sale.cardName).toBe("Charizard");
+    expect(sale.variantId).toBeUndefined();
+    expect(sale.variantName).toBeUndefined();
+  });
+
+  it("re-proves and keeps eBay variantId when title evidences the expected printing", () => {
+    const sale = mapDbSaleToPricingSale(
+      dbRow({
+        listingTitle: "Charizard Base Set 4/102 Reverse Holo NM",
+        variantId: "var-reverse-holo",
+      }),
+      REVERSE_HOLO,
+    );
+    expect(sale.cardId).toBe("card-charizard");
+    expect(sale.variantId).toBe("var-reverse-holo");
+    expect(sale.variantName).toBe("Reverse Holo");
+    expect(sale.printing).toBe("Reverse Holo");
+  });
+
+  it("drops eBay variantId when stored id does not match the pricing request", () => {
+    const sale = mapDbSaleToPricingSale(
+      dbRow({
+        listingTitle: "Charizard Base Set 4/102 Reverse Holo NM",
+        variantId: "var-other",
+      }),
+      REVERSE_HOLO,
+    );
+    expect(sale.cardId).toBe("card-charizard");
+    expect(sale.variantId).toBeUndefined();
+  });
+
+  it("drops eBay variantId without remap context even when title has printing phrases", () => {
+    const sale = mapDbSaleToPricingSale(
+      dbRow({
+        listingTitle: "Charizard Base Set 4/102 Reverse Holo NM",
+        variantId: "var-reverse-holo",
+      }),
+    );
     expect(sale.variantId).toBeUndefined();
   });
 

@@ -84,7 +84,12 @@ export function listingConfirmsCardIdentity(
     (setName !== undefined && containsPhrase(title, setName)) ||
     (setCode !== undefined && containsPhrase(title, setCode));
 
-  return numberOk || setOk;
+  // When the catalog card has a number, require it in the title. Name + set alone
+  // can collide across same-set printings; §16 prefers under-inclusion.
+  if (cardNumber !== undefined) {
+    return numberOk;
+  }
+  return setOk;
 }
 
 /**
@@ -146,12 +151,18 @@ export function ebayIdentityFromListing(
     language: requested.language,
   };
 
-  const wantsVariant =
+  const hasVariantPhrases =
     normalizeText(requested.variantName) !== undefined ||
-    normalizeText(requested.printing) !== undefined ||
-    (requested.variantId !== undefined && requested.variantId.trim() !== "");
+    normalizeText(requested.printing) !== undefined;
+  const wantsVariantId =
+    requested.variantId !== undefined && requested.variantId.trim() !== "";
 
-  if (!wantsVariant) {
+  if (!hasVariantPhrases && !wantsVariantId) {
+    return cardLevel;
+  }
+
+  // variantId alone cannot be evidenced from a title — refuse without phrases.
+  if (!hasVariantPhrases) {
     return cardLevel;
   }
 

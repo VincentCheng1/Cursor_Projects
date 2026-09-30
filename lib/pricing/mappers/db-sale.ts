@@ -1,8 +1,24 @@
 import type { Sale as DbSale } from "@/lib/db/generated/client";
 
-import { listingConfirmsCardIdentity } from "../normalizer/attributeListing";
+import {
+  listingConfirmsCardIdentity,
+  listingConfirmsVariantIdentity,
+} from "../normalizer/attributeListing";
 import { detectMultiCardLot } from "../normalizer/detectLot";
+import { normalizeText } from "../normalizer/text";
 import type { Sale } from "../types/sale";
+
+/**
+ * Optional pricing-request context used to re-prove an eBay variant stamp from
+ * the listing title. Sale rows do not persist variantName/printing, so remap
+ * can only keep a stored variantId when the caller supplies those phrases and
+ * the title evidences them (spec §16 — no invented attribution).
+ */
+export type DbSaleRemapContext = {
+  variantId?: string;
+  variantName?: string;
+  printing?: string | null;
+};
 
 /**
  * Maps a persisted marketplace sale into the pricing engine shape.
@@ -11,7 +27,10 @@ import type { Sale } from "../types/sale";
  * hits. At read time we re-check listing evidence and strip forged identity so
  * poisoned rows cannot enter averages (spec §16).
  */
-export function mapDbSaleToPricingSale(row: DbSale): Sale {
+export function mapDbSaleToPricingSale(
+  row: DbSale,
+  expected?: DbSaleRemapContext,
+): Sale {
   const copiesCovered = row.copiesCovered ?? undefined;
   const isLot = row.isLot === true || detectMultiCardLot(row.listingTitle);
 
@@ -64,9 +83,29 @@ export function mapDbSaleToPricingSale(row: DbSale): Sale {
     };
   }
 
-  // Sale rows do not persist variantName/printing, so we cannot re-prove a
-  // variant stamp from the title alone. Drop eBay variantId on remap — the
-  // live normalizer only stamps variant when the title evidences it, and
-  // variant-scoped averages refuse sales with unknown variant (spec §16).
+  const storedVariantId = row.variantId?.trim() || undefined;
+  const expectedVariantId = expected?.variantId?.trim() || undefined;
+  const variantName = expected?.variantName;
+  const printing = expected?.printing ?? undefined;
+  const hasVariantPhrases =
+    normalizeText(variantName) !== undefined || normalizeText(printing) !== undefined;
+
+  // Re-prove the stored variant against title phrases from the pricing request.
+  // Prefer under-inclusion: no phrases / id mismatch / silent title → drop.
+  if (
+    storedVariantId !== undefined &&
+    expectedVariantId !== undefined &&
+    storedVariantId === expectedVariantId &&
+    hasVariantPhrases &&
+    listingConfirmsVariantIdentity(row.listingTitle, { variantName, printing })
+  ) {
+    return {
+      ...base,
+      variantId: expectedVariantId,
+      variantName,
+      printing,
+    };
+  }
+
   return { ...base, variantId: undefined };
 }

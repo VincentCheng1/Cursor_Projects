@@ -24,6 +24,13 @@ const CONDITION_ALIASES: Record<string, Condition> = {
   mint: "NEAR_MINT",
   "new (other)": "NEAR_MINT",
   "new other": "NEAR_MINT",
+  "nm/m": "NEAR_MINT",
+  "m/nm": "NEAR_MINT",
+  "near mint/mint": "NEAR_MINT",
+  "mint/near mint": "NEAR_MINT",
+  // eBay "Used" graded condition cascade (Item Condition cascade)
+  "used - like new": "NEAR_MINT",
+  "used like new": "NEAR_MINT",
 
   "lightly played": "LIGHTLY_PLAYED",
   "light play": "LIGHTLY_PLAYED",
@@ -36,6 +43,8 @@ const CONDITION_ALIASES: Record<string, Condition> = {
   moderatelyplayed: "MODERATELY_PLAYED",
   mp: "MODERATELY_PLAYED",
   "very good": "MODERATELY_PLAYED",
+  "used - very good": "MODERATELY_PLAYED",
+  "used very good": "MODERATELY_PLAYED",
 
   "heavily played": "HEAVILY_PLAYED",
   "heavy play": "HEAVILY_PLAYED",
@@ -44,10 +53,17 @@ const CONDITION_ALIASES: Record<string, Condition> = {
   poor: "HEAVILY_PLAYED",
   good: "HEAVILY_PLAYED",
   acceptable: "HEAVILY_PLAYED",
+  "used - good": "HEAVILY_PLAYED",
+  "used good": "HEAVILY_PLAYED",
+  "used - acceptable": "HEAVILY_PLAYED",
+  "used acceptable": "HEAVILY_PLAYED",
 
   damaged: "DAMAGED",
   dmg: "DAMAGED",
   "damaged (dmg)": "DAMAGED",
+  "for parts or not working": "DAMAGED",
+  "for parts": "DAMAGED",
+  // Bare "used" / "played" stay unmapped — too ambiguous for a condition slice.
 };
 
 export function normalizeCondition(value: string | null | undefined): Condition | undefined {
