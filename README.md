@@ -44,16 +44,21 @@ npm run lint
 
 ## Environment variables
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string for Prisma |
-| `AUTH_SECRET` | Auth.js session signing secret |
-| `TCGPLAYER_CLIENT_ID` / `TCGPLAYER_CLIENT_SECRET` | Authorized TCGplayer access; leave blank to disable |
-| `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET` | eBay API credentials; leave blank to disable |
-| `EBAY_ENVIRONMENT` | `production` or sandbox |
-| `NEXT_PUBLIC_APP_URL` | Public app URL |
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string for Prisma |
+| `AUTH_SECRET` | Yes | Auth.js session signing secret |
+| `TCGPLAYER_CLIENT_ID` | With secret | Authorized TCGplayer access; leave blank to disable |
+| `TCGPLAYER_CLIENT_SECRET` | With id | TCGplayer OAuth client secret |
+| `TCGPLAYER_API_BASE` | No | Defaults to `https://api.tcgplayer.com` |
+| `TCGPLAYER_SALES_HISTORY_URL_TEMPLATE` | No | Authorized sales-history URL; `{productId}` replaced |
+| `TCGPLAYER_CATEGORY_MAP` | No | e.g. `pokemon:3,one-piece:68` for catalog category IDs |
+| `EBAY_CLIENT_ID` | With secret | eBay API credentials; leave blank to disable |
+| `EBAY_CLIENT_SECRET` | With id | eBay OAuth client secret |
+| `EBAY_ENVIRONMENT` | No | `production` (default) or `sandbox` |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public app URL |
 
-Secrets are server-side only and must never be exposed to the browser.
+Secrets are server-side only and must never be exposed to the browser. Blank marketplace credentials **fail closed** — providers report not configured and never invent catalog rows or sales.
 
 ## Pricing engine
 
@@ -91,7 +96,29 @@ Authorized catalog APIs only — **never HTML scraping**. `CatalogProvider` impl
 - `SYNC_EBAY_TAXONOMY` / `CATALOG_LINKS` / `SOLD_LISTINGS` — taxonomy leaves, EPID links, completed sales
 - `SYNC_PUBLIC_DATA` — orchestrates configured surfaces
 
-Admin **Run public data sync** lives on `/admin/diagnostics` (`POST /api/admin/public-data-sync`, rate-limited). Unconfigured surfaces disable cleanly; marketplace list/market prices stay reference-only and never replace the 20-sale calculated value. §22 pooled combined value is unchanged.
+Admin controls live on `/admin/diagnostics`:
+
+| Action | Endpoint | Behavior |
+| --- | --- | --- |
+| **Check sync readiness** | `POST /api/admin/public-data-sync?dryRun=1` | Reports which providers/surfaces would run; **no** API calls and **no** catalog writes |
+| **Run public data sync** | `POST /api/admin/public-data-sync` | Rate-limited ingest for configured providers only; blocked with readiness payload when none are configured |
+| Diagnostics | `GET /api/admin/diagnostics` | Provider status, missing env var **names**, surface coverage, sync readiness (never secret values) |
+
+Unconfigured surfaces disable cleanly; marketplace list/market prices stay reference-only and never replace the 20-sale calculated value. §22 pooled combined value is unchanged.
+
+### After you obtain live credentials
+
+1. Copy `.env.example` → `.env` (if needed) and set the pairs you have:
+   - TCGplayer: `TCGPLAYER_CLIENT_ID` + `TCGPLAYER_CLIENT_SECRET` (optional `TCGPLAYER_CATEGORY_MAP`, `TCGPLAYER_SALES_HISTORY_URL_TEMPLATE`)
+   - eBay: `EBAY_CLIENT_ID` + `EBAY_CLIENT_SECRET` (optional `EBAY_ENVIRONMENT`)
+2. Restart the Node / Next.js process so env vars load.
+3. Sign in as an **admin** user and open `/admin/diagnostics`.
+4. Confirm each provider shows **Configured** (missing env var names are listed when not).
+5. Click **Check sync readiness** (dry-run) — review `surfacesEnabled` / next steps; no catalog is written.
+6. Click **Run public data sync** to ingest authorized public catalog / sold data.
+7. Refresh prices for collection cards via the UI refresh action or `POST /api/sync` with `SYNC_CARD_SALES` / `SNAPSHOT_PRICE` / `REFRESH_COLLECTION` once catalog external IDs exist.
+
+Without credentials, stop at step 5 readiness — do not invent API keys, cards, or sales.
 
 ## Background jobs (Phase 15)
 

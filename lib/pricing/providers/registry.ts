@@ -45,14 +45,14 @@ export function listProviderStatus(): ProviderStatus[] {
       displayName: tcg.displayName,
       health: tcg.isConfigured()
         ? { status: "READY" }
-        : { status: "NOT_CONFIGURED", message: "TCGplayer integration not configured." },
+        : { status: "NOT_CONFIGURED", message: "TCGplayer integration not configured. Set TCGPLAYER_CLIENT_ID and TCGPLAYER_CLIENT_SECRET." },
     },
     {
       id: "EBAY",
       displayName: ebay.displayName,
       health: ebay.isConfigured()
         ? { status: "READY" }
-        : { status: "NOT_CONFIGURED", message: "eBay integration not configured." },
+        : { status: "NOT_CONFIGURED", message: "eBay integration not configured. Set EBAY_CLIENT_ID and EBAY_CLIENT_SECRET." },
     },
   ];
 }

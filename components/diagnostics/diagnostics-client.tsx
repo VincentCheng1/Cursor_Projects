@@ -13,9 +13,36 @@ type Surface = {
   rowCount: number;
 };
 
+type ProviderDetail = {
+  displayName: string;
+  health: { status: string; message?: string };
+  credentialsConfigured?: boolean;
+  missingEnvVars?: string[];
+  statusMessage?: string;
+};
+
+type SyncReadiness = {
+  canRunPublicDataSync: boolean;
+  canRefreshPrices: boolean;
+  summary: string;
+  nextSteps: string[];
+  providers: Array<{
+    id: string;
+    displayName: string;
+    configured: boolean;
+    missingEnvVars: string[];
+    statusMessage: string;
+    surfacesThatWouldRun: string[];
+  }>;
+  surfacesEnabled: Array<{ provider: string; surface: string }>;
+  dryRun: true;
+  checkedAt: string;
+};
+
 type Diagnostics = {
-  tcgplayer?: { displayName: string; health: { status: string; message?: string } };
-  ebay?: { displayName: string; health: { status: string; message?: string } };
+  tcgplayer?: ProviderDetail;
+  ebay?: ProviderDetail;
+  syncReadiness?: SyncReadiness;
   publicDataSurfaces?: Surface[];
   catalogCounts?: {
     games: number;
@@ -44,10 +71,27 @@ function healthLabel(health: { status: string; message?: string }) {
   return health.message ?? health.status;
 }
 
+function providerLine(label: string, detail?: ProviderDetail) {
+  if (!detail) return `${label}: —`;
+  const configured = detail.credentialsConfigured;
+  if (configured === true) {
+    return `${label}: Configured — ${detail.statusMessage ?? "Ready for authorized API calls."}`;
+  }
+  if (configured === false) {
+    const missing =
+      detail.missingEnvVars && detail.missingEnvVars.length > 0
+        ? ` Missing: ${detail.missingEnvVars.join(", ")}.`
+        : "";
+    return `${label}: Not configured.${missing} ${detail.statusMessage ?? healthLabel(detail.health)}`;
+  }
+  return `${label}: ${healthLabel(detail.health)}`;
+}
+
 export function DiagnosticsClient() {
   const [data, setData] = useState<Diagnostics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -64,6 +108,36 @@ export function DiagnosticsClient() {
     void load();
   }, [load]);
 
+  async function checkSyncReadiness() {
+    setChecking(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch("/api/admin/public-data-sync?dryRun=1", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dryRun: true }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        note?: string;
+        readiness?: SyncReadiness;
+        status?: string;
+      };
+      if (!res.ok) {
+        setSyncMessage(json.error ?? "Readiness check failed.");
+        return;
+      }
+      const summary = json.readiness?.summary ?? json.note ?? "Readiness checked.";
+      const steps = json.readiness?.nextSteps?.slice(0, 3).join(" ") ?? "";
+      setSyncMessage(`Sync readiness (dry-run): ${summary}${steps ? ` Next: ${steps}` : ""}`);
+      await load();
+    } catch {
+      setSyncMessage("Readiness check request failed.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
   async function runPublicDataSync() {
     setSyncing(true);
     setSyncMessage(null);
@@ -74,9 +148,17 @@ export function DiagnosticsClient() {
         status?: string;
         note?: string;
         outcome?: { processed?: number; failed?: number; errors?: string[] };
+        readiness?: SyncReadiness;
       };
       if (!res.ok) {
         setSyncMessage(json.error ?? "Sync failed.");
+        return;
+      }
+      if (json.status === "BLOCKED_NOT_CONFIGURED") {
+        setSyncMessage(
+          `${json.note ?? "Blocked — providers not configured."} ${json.readiness?.summary ?? ""}`,
+        );
+        await load();
         return;
       }
       const processed = json.outcome?.processed ?? 0;
@@ -92,14 +174,29 @@ export function DiagnosticsClient() {
     }
   }
 
+  const canSync = data?.syncReadiness?.canRunPublicDataSync === true;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
+          onClick={() => void checkSyncReadiness()}
+          disabled={checking}
+          className="rounded-lg border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-200 disabled:opacity-50"
+        >
+          {checking ? "Checking readiness…" : "Check sync readiness"}
+        </button>
+        <button
+          type="button"
           onClick={() => void runPublicDataSync()}
-          disabled={syncing}
+          disabled={syncing || data?.syncReadiness?.canRunPublicDataSync === false}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          title={
+            canSync
+              ? "Run authorized public data ingest"
+              : "Set TCGplayer and/or eBay credentials first"
+          }
         >
           {syncing ? "Running public data sync…" : "Run public data sync"}
         </button>
@@ -111,7 +208,8 @@ export function DiagnosticsClient() {
           Refresh
         </button>
         <p className="text-xs text-zinc-500">
-          Authorized marketplace APIs only — never HTML scraping.
+          Authorized marketplace APIs only — never HTML scraping. Dry-run never invents catalog
+          data.
         </p>
       </div>
       {syncMessage && <p className="text-sm text-zinc-300">{syncMessage}</p>}
@@ -120,12 +218,26 @@ export function DiagnosticsClient() {
       {data && (
         <>
           <section className="space-y-2">
+            <h2 className="text-lg font-medium">Sync readiness</h2>
+            <p className="text-sm text-zinc-300">{data.syncReadiness?.summary ?? "—"}</p>
+            <ul className="list-inside list-disc space-y-1 text-xs text-zinc-500">
+              {(data.syncReadiness?.nextSteps ?? []).map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+            {!canSync && (
+              <p className="text-sm text-amber-400/90">
+                Public data sync is disabled until credentials are set. Seeded games remain
+                searchable; CardVault will not invent marketplace cards or sales.
+              </p>
+            )}
+          </section>
+
+          <section className="space-y-2">
             <h2 className="text-lg font-medium">Pricing providers</h2>
             <ul className="space-y-1 text-sm text-zinc-300">
-              <li>
-                TCGplayer: {data.tcgplayer ? healthLabel(data.tcgplayer.health) : "—"}
-              </li>
-              <li>eBay: {data.ebay ? healthLabel(data.ebay.health) : "—"}</li>
+              <li>{providerLine("TCGplayer", data.tcgplayer)}</li>
+              <li>{providerLine("eBay", data.ebay)}</li>
             </ul>
           </section>
 

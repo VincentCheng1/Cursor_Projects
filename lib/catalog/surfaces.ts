@@ -20,6 +20,7 @@ export const SURFACE_DISPLAY_NAMES: Record<
 };
 
 export const NOT_CONFIGURED_MESSAGES: Record<CatalogProviderId, string> = {
-  TCGPLAYER: "TCGplayer integration not configured.",
-  EBAY: "eBay integration not configured.",
+  TCGPLAYER:
+    "TCGplayer integration not configured. Set TCGPLAYER_CLIENT_ID and TCGPLAYER_CLIENT_SECRET.",
+  EBAY: "eBay integration not configured. Set EBAY_CLIENT_ID and EBAY_CLIENT_SECRET.",
 };
