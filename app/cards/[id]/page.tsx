@@ -37,26 +37,31 @@ export default async function CardDetailPage({ params }: PageProps) {
 
   const live = await computeCardPrice(identity);
   const combined = live.combined;
-  const displayValue = latest.COMBINED?.averagePrice ?? combined.average;
-  const displaySalesUsed = latest.COMBINED?.salesUsed ?? combined.salesUsed;
+  // Headline and "View Sales Used" share the same live engine result so
+  // value / salesUsed / usedSales cannot disagree (pricing-pipeline audit P1 #3).
+  const displayValue = combined.average;
+  const displaySalesUsed = combined.salesUsed;
   const lastUpdated = latest.COMBINED?.calculatedAt ?? null;
 
   const history = await getPriceHistory({
     cardId: card.id,
     variantId: variant?.id,
+    condition: identity.condition,
+    gradingCompany: identity.gradingCompany,
+    grade: identity.grade ?? null,
     range: "30D",
   });
 
   const breakdownRows = [
     {
       label: "TCGplayer",
-      average: live.bySource.TCGPLAYER?.average ?? latest.TCGPLAYER?.averagePrice ?? null,
-      salesUsed: live.bySource.TCGPLAYER?.salesUsed ?? latest.TCGPLAYER?.salesUsed ?? 0,
+      average: live.bySource.TCGPLAYER?.average ?? null,
+      salesUsed: live.bySource.TCGPLAYER?.salesUsed ?? 0,
     },
     {
       label: "eBay",
-      average: live.bySource.EBAY?.average ?? latest.EBAY?.averagePrice ?? null,
-      salesUsed: live.bySource.EBAY?.salesUsed ?? latest.EBAY?.salesUsed ?? 0,
+      average: live.bySource.EBAY?.average ?? null,
+      salesUsed: live.bySource.EBAY?.salesUsed ?? 0,
     },
     {
       label: "Combined",
@@ -127,6 +132,9 @@ export default async function CardDetailPage({ params }: PageProps) {
           <PriceHistoryChart
             cardId={card.id}
             variantId={variant?.id}
+            condition={identity.condition}
+            gradingCompany={identity.gradingCompany}
+            grade={identity.grade ?? undefined}
             initialPoints={history.map((h) => ({
               calculatedAt: h.calculatedAt.toISOString(),
               averagePrice: h.averagePrice ? Number(h.averagePrice.toString()) : null,

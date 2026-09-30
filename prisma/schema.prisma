@@ -325,6 +325,10 @@ model Sale {
   listingUrl     String?
   sellerName     String?
   imageUrl       String?
+  /// How many copies `salePrice` covers. >1 means a multi-copy sale (spec §16).
+  copiesCovered  Int?
+  /// True when the listing was identified as a lot/bundle/playset at ingest.
+  isLot          Boolean         @default(false)
   /// Untouched provider payload, kept so a calculation can always be audited.
   rawData        Json?
   /// Stable hash used to deduplicate sales that arrive without an externalSaleId (spec §17).

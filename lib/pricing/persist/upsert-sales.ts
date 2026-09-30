@@ -6,6 +6,10 @@ import type { Sale } from "../types/sale";
 
 /**
  * Persists normalized provider sales without duplicating existing rows (§17).
+ *
+ * Only sales already attributed to `cardId` are written. Keyword hits that failed
+ * conservative listing attribution (no `cardId`, or a different one) are skipped
+ * so persistence cannot forge CardVault identity (spec §5, §16).
  */
 export async function upsertSalesForCard(sales: Sale[], cardId: string, variantId?: string) {
   let processed = 0;
@@ -13,6 +17,10 @@ export async function upsertSalesForCard(sales: Sale[], cardId: string, variantI
   const prisma = getPrisma();
 
   for (const sale of sales) {
+    if (sale.cardId !== cardId) {
+      continue;
+    }
+
     try {
       const source = sale.source as SaleSource;
       const externalSaleId = sale.externalSaleId?.trim() || null;
@@ -28,7 +36,7 @@ export async function upsertSalesForCard(sales: Sale[], cardId: string, variantI
             });
 
       const data = {
-        cardId,
+        cardId: sale.cardId,
         variantId: variantId ?? sale.variantId ?? null,
         game: sale.game ?? null,
         cardName: sale.cardName ?? null,
@@ -47,6 +55,8 @@ export async function upsertSalesForCard(sales: Sale[], cardId: string, variantI
         listingUrl: sale.listingUrl ?? null,
         sellerName: sale.sellerName ?? null,
         imageUrl: sale.imageUrl ?? null,
+        copiesCovered: sale.copiesCovered ?? null,
+        isLot: sale.isLot ?? false,
         rawData: sale.rawData as object | undefined,
       };
 

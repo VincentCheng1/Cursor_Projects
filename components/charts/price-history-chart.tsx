@@ -18,10 +18,16 @@ export type PricePoint = { calculatedAt: string; averagePrice: number | null };
 export function PriceHistoryChart({
   cardId,
   variantId,
+  condition,
+  gradingCompany,
+  grade,
   initialPoints,
 }: {
   cardId: string;
   variantId?: string;
+  condition?: string;
+  gradingCompany?: string;
+  grade?: string;
   initialPoints?: PricePoint[];
 }) {
   const [range, setRange] = useState<(typeof RANGES)[number]>("30D");
@@ -45,6 +51,9 @@ export function PriceHistoryChart({
     try {
       const params = new URLSearchParams({ range: r });
       if (variantId) params.set("variantId", variantId);
+      if (condition) params.set("condition", condition);
+      if (gradingCompany) params.set("gradingCompany", gradingCompany);
+      if (grade) params.set("grade", grade);
       const res = await fetch(`/api/price-history/${cardId}?${params}`);
       const json = await res.json();
       setPoints(json.points ?? []);

@@ -10,8 +10,10 @@ import {
   calculateROI,
   calculateTotalCost,
 } from "@/lib/pricing/calculator/collectionValue";
+import { listingConfirmsCardIdentity } from "@/lib/pricing/normalizer/attributeListing";
 import { normalizeCondition } from "@/lib/pricing/normalizer/normalizeCondition";
 import { normalizeCurrency } from "@/lib/pricing/normalizer/normalizeCurrency";
+import { normalizeEbaySale } from "@/lib/pricing/normalizer/normalizeSale";
 import { toMoneyString } from "@/lib/pricing/money";
 import { makeSale, TEST_NOW } from "./fixtures";
 describe("deduplicateSales", () => {
@@ -122,8 +124,119 @@ describe("normalizers", () => {
   it("normalizeCondition maps NM", () => {
     expect(normalizeCondition("NM")).toBe("NEAR_MINT");
   });
+  it("normalizeCondition maps common eBay labels", () => {
+    expect(normalizeCondition("New")).toBe("NEAR_MINT");
+    expect(normalizeCondition("Like New")).toBe("NEAR_MINT");
+    expect(normalizeCondition("Brand New")).toBe("NEAR_MINT");
+    expect(normalizeCondition("Good")).toBe("HEAVILY_PLAYED");
+    expect(normalizeCondition("Acceptable")).toBe("HEAVILY_PLAYED");
+  });
   it("normalizeCurrency maps USD", () => {
     expect(normalizeCurrency("usd")).toBe("USD");
+  });
+});
+
+describe("eBay listing attribution §16", () => {
+  const CHARIZARD = {
+    cardId: "card-charizard",
+    game: "pokemon",
+    cardName: "Charizard",
+    setName: "Base Set",
+    cardNumber: "4/102",
+    language: "EN",
+  };
+
+  it("does not stamp requested identity onto an unrelated Pikachu title", () => {
+    const sale = normalizeEbaySale(
+      {
+        itemId: "ebay-pika-1",
+        title: "Pikachu Base Set 58/102 NM",
+        price: { value: 12.5, currency: "USD" },
+        lastSoldDate: "2026-09-10T12:00:00Z",
+        condition: "Near Mint",
+      },
+      CHARIZARD,
+    );
+    expect(sale).not.toBeNull();
+    expect(sale!.cardId).toBeUndefined();
+    expect(sale!.cardName).toBeUndefined();
+    expect(sale!.listingTitle).toBe("Pikachu Base Set 58/102 NM");
+  });
+
+  it("excludes a Pikachu listing from a Charizard average (regression)", () => {
+    const pikachuHit = normalizeEbaySale(
+      {
+        itemId: "ebay-pika-avg",
+        title: "Pikachu Base Set 58/102 NM",
+        price: { value: 999, currency: "USD" },
+        lastSoldDate: "2026-09-20T12:00:00Z",
+        condition: "Near Mint",
+      },
+      CHARIZARD,
+    );
+    const realCharizard = normalizeEbaySale(
+      {
+        itemId: "ebay-zard-1",
+        title: "Charizard Base Set 4/102 Holo NM",
+        price: { value: 100, currency: "USD" },
+        lastSoldDate: "2026-09-18T12:00:00Z",
+        condition: "Near Mint",
+      },
+      CHARIZARD,
+    );
+
+    expect(pikachuHit).not.toBeNull();
+    expect(realCharizard).not.toBeNull();
+    expect(realCharizard!.cardId).toBe("card-charizard");
+    expect(realCharizard!.cardName).toBe("Charizard");
+
+    const match = {
+      cardId: "card-charizard",
+      cardName: "Charizard",
+      setName: "Base Set",
+      cardNumber: "4/102",
+      condition: "NEAR_MINT" as const,
+      gradingCompany: "RAW" as const,
+    };
+
+    const { qualifying, excluded } = filterQualifyingSales(
+      [pikachuHit!, realCharizard!],
+      { match, currency: "USD", now: TEST_NOW },
+    );
+    expect(qualifying).toHaveLength(1);
+    expect(qualifying[0]?.externalSaleId).toBe("ebay-zard-1");
+    expect(excluded.some((e) => e.sale.externalSaleId === "ebay-pika-avg")).toBe(
+      true,
+    );
+
+    const r = calculateRecentSalesAverage([pikachuHit!, realCharizard!], 20, {
+      match,
+      currency: "USD",
+      now: TEST_NOW,
+    });
+    expect(r.status).toBe("CALCULATED");
+    expect(r.salesUsed).toBe(1);
+    expect(r.average).toBe(100);
+  });
+
+  it("confirms identity when title carries name + number", () => {
+    expect(
+      listingConfirmsCardIdentity("Charizard Base Set 4/102 NM Holo", {
+        cardName: "Charizard",
+        setName: "Base Set",
+        cardNumber: "4/102",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects name-only titles without set or number evidence", () => {
+    expect(
+      listingConfirmsCardIdentity("Charizard PSA 10 gem mint", {
+        cardName: "Charizard",
+        setName: "Base Set",
+        cardNumber: "4/102",
+      }),
+    ).toBe(false);
   });
 });
 

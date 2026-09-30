@@ -17,12 +17,19 @@ const CONDITION_ALIASES: Record<string, Condition> = {
   nm: "NEAR_MINT",
   "nm-mt": "NEAR_MINT",
   "near mint (nm)": "NEAR_MINT",
+  // eBay Finding / Trading Card conditionDisplayName values
+  new: "NEAR_MINT",
+  "brand new": "NEAR_MINT",
+  "like new": "NEAR_MINT",
+  mint: "NEAR_MINT",
+  "new (other)": "NEAR_MINT",
+  "new other": "NEAR_MINT",
 
   "lightly played": "LIGHTLY_PLAYED",
   "light play": "LIGHTLY_PLAYED",
   lightlyplayed: "LIGHTLY_PLAYED",
   lp: "LIGHTLY_PLAYED",
-  "excellent": "LIGHTLY_PLAYED",
+  excellent: "LIGHTLY_PLAYED",
 
   "moderately played": "MODERATELY_PLAYED",
   "moderate play": "MODERATELY_PLAYED",
@@ -35,6 +42,8 @@ const CONDITION_ALIASES: Record<string, Condition> = {
   heavilyplayed: "HEAVILY_PLAYED",
   hp: "HEAVILY_PLAYED",
   poor: "HEAVILY_PLAYED",
+  good: "HEAVILY_PLAYED",
+  acceptable: "HEAVILY_PLAYED",
 
   damaged: "DAMAGED",
   dmg: "DAMAGED",

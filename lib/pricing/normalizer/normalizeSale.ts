@@ -4,14 +4,18 @@ import type { GradingCompany } from "../types/grading";
 import { isGradingCompany, normalizeGrade } from "../types/grading";
 import type { MoneyValue, Sale, SaleSource } from "../types/sale";
 import { isValidMoney, roundMoney, toDecimal } from "../money";
+import { ebayIdentityFromListing } from "./attributeListing";
 import { detectMultiCardLot } from "./detectLot";
 import { normalizeCondition } from "./normalizeCondition";
 import { normalizeCurrency } from "./normalizeCurrency";
 import { normalizeLanguage } from "./text";
 
 /**
- * Context supplied by the provider that fetched the sale: the card CardVault
- * asked about. Providers query per card, so this is known, not inferred.
+ * Context supplied by the provider that fetched the sale.
+ *
+ * For catalogue-keyed sources (TCGplayer product id) this identity is known.
+ * For keyword search (eBay Finding) it is only a *candidate* — `normalizeEbaySale`
+ * stamps it only when listing evidence confirms the match (spec §16).
  */
 export interface SaleNormalizationContext extends CardIdentifier {
   /** Fallback currency when the payload omits one. Providers set this from their API contract. */
@@ -235,6 +239,10 @@ export function normalizeEbaySale(
   record: EbaySoldItemRecord,
   context: SaleNormalizationContext,
 ): Sale | null {
+  // Never forge CardVault identity from the search request. Keyword hits must
+  // earn attribution from the listing title (and any item specifics later).
+  const identity = ebayIdentityFromListing({ title: record.title }, context);
+
   return buildSale(
     {
       source: "EBAY",
@@ -244,7 +252,9 @@ export function normalizeEbaySale(
       currency: record.price?.currency,
       saleDate: record.lastSoldDate,
       condition: record.condition,
-      language: record.language,
+      // Language only from the listing — do not inherit the request language
+      // when attribution failed (that would invent agreement with the criteria).
+      language: record.language ?? (identity.cardId ? context.language : undefined),
       gradingCompany: record.gradingCompany,
       grade: record.grade,
       listingTitle: record.title,
@@ -253,6 +263,9 @@ export function normalizeEbaySale(
       imageUrl: record.image?.imageUrl,
       rawData: record,
     },
-    context,
+    {
+      ...identity,
+      defaultCurrency: context.defaultCurrency,
+    },
   );
 }
