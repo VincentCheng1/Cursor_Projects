@@ -78,3 +78,12 @@ Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
 - `REFRESH_COLLECTION` — sync + snapshot for each collection item
 
 `GET /api/sync/{jobId}` returns job status. `GET /api/sync/providers` shows provider health and last successful sync.
+
+## Collection import / export (Phase 16)
+
+- `GET /api/collection/export` — CSV with the §36 column list (including server-calculated value, profit, ROI).
+- `POST /api/collection/import` — `{ csv, commit }`. Validates every row before any database write; `commit: false` previews, `commit: true` imports only when validation is clean.
+
+## Security (Phase 17)
+
+Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `middleware.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed).

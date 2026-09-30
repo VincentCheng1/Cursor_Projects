@@ -154,6 +154,46 @@ export function CollectionClient() {
         >
           Refresh collection prices
         </button>
+        <a
+          href="/api/collection/export"
+          className="rounded-lg border border-zinc-700 px-3 py-2 text-sm"
+        >
+          Export CSV
+        </a>
+        <label className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-2 text-sm">
+          Import CSV
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const csv = await file.text();
+              const validate = await fetch("/api/collection/import", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ csv, commit: false }),
+              });
+              const preview = await validate.json();
+              if (preview.errors?.length) {
+                alert(`Import errors:\n${preview.errors.map((x: { row: number; message: string }) => `Row ${x.row}: ${x.message}`).join("\n")}`);
+                return;
+              }
+              if (!confirm(`Import ${preview.validCount} items?`)) return;
+              const commit = await fetch("/api/collection/import", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ csv, commit: true }),
+              });
+              const result = await commit.json();
+              if (result.committed) {
+                await load();
+                alert(`Imported ${result.created} items.`);
+              }
+            }}
+          />
+        </label>
       </div>
 
       {view === "grid" ? (

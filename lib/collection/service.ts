@@ -1,6 +1,8 @@
 import type { Prisma } from "@/lib/db/generated/client";
 import { getPrisma } from "@/lib/db/client";
 
+import { requireOwnership } from "@/lib/auth/ownership";
+
 import type { createCollectionItemSchema, updateCollectionItemSchema } from "./schemas";
 import type { z } from "zod";
 
@@ -58,9 +60,10 @@ export async function updateCollectionItem(
 ) {
   const existing = await getCollectionItem(userId, id);
   if (existing === null) return null;
+  requireOwnership(existing.userId, userId);
 
-  return getPrisma().collectionItem.update({
-    where: { id },
+  const updated = await getPrisma().collectionItem.updateMany({
+    where: { id, userId },
     data: {
       ...(data.variantId !== undefined ? { variantId: data.variantId ?? null } : {}),
       ...(data.condition !== undefined ? { condition: data.condition } : {}),
@@ -72,13 +75,16 @@ export async function updateCollectionItem(
       ...(data.purchaseSource !== undefined ? { purchaseSource: data.purchaseSource ?? null } : {}),
       ...(data.notes !== undefined ? { notes: data.notes ?? null } : {}),
     },
-    include: cardInclude,
   });
+  if (updated.count === 0) return null;
+
+  return getCollectionItem(userId, id);
 }
 
 export async function deleteCollectionItem(userId: string, id: string) {
   const existing = await getCollectionItem(userId, id);
   if (existing === null) return false;
-  await getPrisma().collectionItem.delete({ where: { id } });
-  return true;
+  requireOwnership(existing.userId, userId);
+  const result = await getPrisma().collectionItem.deleteMany({ where: { id, userId } });
+  return result.count > 0;
 }
