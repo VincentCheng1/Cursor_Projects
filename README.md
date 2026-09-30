@@ -139,4 +139,4 @@ Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
 
 ## Security (Phase 17)
 
-Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `middleware.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed) include per-surface public-data coverage and the rate-limited sync control.
+Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `proxy.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed) include per-surface public-data coverage and the rate-limited sync control.
