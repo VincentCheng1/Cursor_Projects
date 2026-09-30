@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { MoversPanel } from "@/components/dashboard/movers-panel";
 import { formatMoney } from "@/lib/pricing/money";
 
 type Row = {
@@ -124,6 +125,8 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-8">
+      <MoversPanel />
+
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Collection summary">
         {[
           {
