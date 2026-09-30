@@ -35,17 +35,50 @@ export function buildCardResolveWhere(input: CardResolveQuery): Prisma.CardWhere
   if (input.setType) {
     setFilter.setType = input.setType as SetType;
   }
+
+  const foilFilter =
+    input.isFoil === undefined ? undefined : ({ isFoil: input.isFoil } as const);
+  const hasSetFilter = Object.keys(setFilter).length > 0;
+
   if (input.year !== undefined) {
     const start = new Date(Date.UTC(input.year, 0, 1));
     const end = new Date(Date.UTC(input.year + 1, 0, 1));
-    setFilter.releaseDate = { gte: start, lt: end };
-  }
-  if (Object.keys(setFilter).length > 0) {
-    where.set = setFilter;
-  }
-
-  if (input.isFoil !== undefined) {
-    where.variants = { some: { isFoil: input.isFoil } };
+    // Explicit variant.printYear, else Set.releaseDate when printYear is null (§30b).
+    where.OR = [
+      {
+        ...(hasSetFilter ? { set: setFilter } : {}),
+        variants: {
+          some: {
+            printYear: input.year,
+            ...(foilFilter ?? {}),
+          },
+        },
+      },
+      {
+        set: {
+          ...setFilter,
+          releaseDate: { gte: start, lt: end },
+        },
+        OR: [
+          { variants: { none: {} } },
+          {
+            variants: {
+              some: {
+                printYear: null,
+                ...(foilFilter ?? {}),
+              },
+            },
+          },
+        ],
+      },
+    ];
+  } else {
+    if (hasSetFilter) {
+      where.set = setFilter;
+    }
+    if (foilFilter) {
+      where.variants = { some: foilFilter };
+    }
   }
 
   return where;

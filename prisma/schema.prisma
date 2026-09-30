@@ -220,6 +220,9 @@ model CardVariant {
   language    String   @default("EN")
   isFoil      Boolean  @default(false)
   isParallel  Boolean  @default(false)
+  /// Optional override when print year differs from Set.releaseDate (spec §30b).
+  /// Null → effective year falls back to the parent set's releaseDate year.
+  printYear   Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

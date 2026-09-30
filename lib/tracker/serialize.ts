@@ -1,17 +1,13 @@
 import { TRACKER_LINE_COLORS } from "./constants";
+import { effectivePrintYear } from "@/lib/cards/print-year";
 import type { listTrackerSeries } from "./service";
 
 type Row = Awaited<ReturnType<typeof listTrackerSeries>>[number];
 
-function releaseYear(date: Date | null | undefined): number | null {
-  if (!date) return null;
-  return date.getUTCFullYear();
-}
-
 export function serializeTrackerSeries(row: Row) {
   const setType = row.card.set.setType;
   const isFoil = row.variant?.isFoil ?? false;
-  const year = releaseYear(row.card.set.releaseDate);
+  const year = effectivePrintYear(row.variant?.printYear, row.card.set.releaseDate);
   const foil = isFoil ? "Foil" : "Non-Foil";
   const typeLabel = setType === "MAIN" ? "Main" : setType === "PROMO" ? "Promo" : "Other";
   const label = `${row.card.name} · ${row.card.set.name} · ${row.card.cardNumber} · ${foil} · ${year ?? "—"} · ${typeLabel}`;
@@ -31,5 +27,6 @@ export function serializeTrackerSeries(row: Row) {
     setType,
     isFoil,
     releaseYear: year,
+    printYear: row.variant?.printYear ?? null,
   };
 }

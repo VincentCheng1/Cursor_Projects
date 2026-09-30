@@ -37,6 +37,8 @@ export interface CatalogVariant {
   language?: string;
   isFoil?: boolean;
   isParallel?: boolean;
+  /** Optional override when print year differs from set release (spec §30b). */
+  printYear?: number | null;
 }
 
 export interface CatalogProduct {

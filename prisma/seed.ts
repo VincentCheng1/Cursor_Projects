@@ -72,13 +72,15 @@ async function main() {
         language: "EN",
       },
     },
-    update: {},
+    // Null printYear → labels/filters use Set.releaseDate year (1999) per §30b.
+    update: { printYear: null },
     create: {
       cardId: charizard.id,
       variantName: "Holo",
       printing: "Unlimited",
       language: "EN",
       isFoil: true,
+      printYear: null,
     },
   });
 

@@ -177,11 +177,13 @@ export function TrackerClient() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1">
+        <div className="flex gap-1" data-testid="tracker-range-chips" role="group" aria-label="History range">
           {RANGES.map((r) => (
             <button
               key={r}
               type="button"
+              data-testid={`tracker-range-${r}`}
+              aria-pressed={range === r}
               onClick={() => setRange(r)}
               className={`rounded px-2 py-1 text-xs ${
                 range === r ? "bg-emerald-600 text-white" : "bg-zinc-800 text-zinc-400"
@@ -193,6 +195,7 @@ export function TrackerClient() {
         </div>
         <button
           type="button"
+          data-testid="tracker-add-open"
           onClick={() => {
             setAddOpen((v) => !v);
             setAddMessage(null);
@@ -204,12 +207,16 @@ export function TrackerClient() {
       </div>
 
       {addOpen && (
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+        <section
+          className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4"
+          data-testid="tracker-add-panel"
+        >
           <h2 className="text-sm font-medium text-zinc-300">Add by card identity</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="text-xs text-zinc-500">
               Card number
               <input
+                data-testid="tracker-card-number"
                 className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
@@ -218,6 +225,7 @@ export function TrackerClient() {
             <label className="text-xs text-zinc-500">
               Set name or code
               <input
+                data-testid="tracker-set"
                 className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
                 value={setName}
                 onChange={(e) => setSetName(e.target.value)}
@@ -226,6 +234,7 @@ export function TrackerClient() {
             <label className="text-xs text-zinc-500">
               Set type
               <select
+                data-testid="tracker-set-type"
                 className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
                 value={setType}
                 onChange={(e) => setSetType(e.target.value)}
@@ -239,6 +248,7 @@ export function TrackerClient() {
             <label className="text-xs text-zinc-500">
               Foil
               <select
+                data-testid="tracker-foil"
                 className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
                 value={isFoil}
                 onChange={(e) => setIsFoil(e.target.value)}
@@ -252,6 +262,7 @@ export function TrackerClient() {
               Year printed
               <input
                 type="number"
+                data-testid="tracker-year"
                 className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
@@ -260,22 +271,33 @@ export function TrackerClient() {
           </div>
           <button
             type="button"
+            data-testid="tracker-resolve"
             onClick={resolveCards}
             className="mt-3 rounded border border-zinc-700 px-3 py-1 text-sm"
           >
             Resolve
           </button>
-          {resolveError && <p className="mt-2 text-sm text-amber-400">{resolveError}</p>}
-          {addMessage && <p className="mt-2 text-sm text-amber-400">{addMessage}</p>}
-          <ul className="mt-3 space-y-2">
+          {resolveError && (
+            <p className="mt-2 text-sm text-amber-400" data-testid="tracker-resolve-error">
+              {resolveError}
+            </p>
+          )}
+          {addMessage && (
+            <p className="mt-2 text-sm text-amber-400" data-testid="tracker-add-message">
+              {addMessage}
+            </p>
+          )}
+          <ul className="mt-3 space-y-2" data-testid="tracker-resolve-matches">
             {resolveMatches.map((m) => (
               <li
                 key={`${m.cardId}-${m.variantId ?? "raw"}`}
                 className="flex items-center justify-between gap-2 rounded border border-zinc-800 px-3 py-2 text-sm"
+                data-testid={`tracker-match-${m.cardId}`}
               >
                 <span>{m.label}</span>
                 <button
                   type="button"
+                  data-testid={`tracker-add-${m.cardId}`}
                   onClick={() => addSeries(m)}
                   className="text-emerald-400 hover:underline"
                 >
@@ -288,15 +310,19 @@ export function TrackerClient() {
       )}
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-        <div className="h-80">
+        <div className="h-80" data-testid="tracker-chart">
           {loading || historyLoading ? (
             <p className="text-sm text-zinc-500">Loading chart…</p>
           ) : items.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-center">
+            <div
+              className="flex h-full flex-col items-center justify-center text-center"
+              data-testid="tracker-empty"
+            >
               <p className="text-zinc-300">Compare multiple cards on one chart.</p>
               <p className="mt-2 text-sm text-zinc-500">Add a card to start tracking COMBINED values.</p>
               <button
                 type="button"
+                data-testid="tracker-add-open-empty"
                 onClick={() => setAddOpen(true)}
                 className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white"
               >
@@ -304,45 +330,47 @@ export function TrackerClient() {
               </button>
             </div>
           ) : chartData.length === 0 ? (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-500" data-testid="tracker-no-history">
               No COMBINED snapshot history in this range yet. Refresh prices on card pages.
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid stroke="#27272a" />
-                <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 11 }} />
-                <YAxis
-                  tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                  tickFormatter={(v) => `$${v}`}
-                />
-                <Tooltip
-                  formatter={(value) =>
-                    typeof value === "number" ? formatMoney(value) : String(value ?? "")
-                  }
-                  labelFormatter={(label) => String(label)}
-                />
-                <Legend />
-                {visibleItems.map((item) => (
-                  <Line
-                    key={item.id}
-                    type="monotone"
-                    dataKey={item.id}
-                    name={item.label}
-                    stroke={item.color}
-                    dot={false}
-                    connectNulls={false}
-                    strokeWidth={2}
+            <div data-testid="tracker-chart-ready" className="h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid stroke="#27272a" />
+                  <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 11 }} />
+                  <YAxis
+                    tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                    tickFormatter={(v) => `$${v}`}
                   />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+                  <Tooltip
+                    formatter={(value) =>
+                      typeof value === "number" ? formatMoney(value) : String(value ?? "")
+                    }
+                    labelFormatter={(label) => String(label)}
+                  />
+                  <Legend />
+                  {visibleItems.map((item) => (
+                    <Line
+                      key={item.id}
+                      type="monotone"
+                      dataKey={item.id}
+                      name={item.label}
+                      stroke={item.color}
+                      dot={false}
+                      connectNulls={false}
+                      strokeWidth={2}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </div>
       </section>
 
       {items.length > 0 && (
-        <section className="space-y-2">
+        <section className="space-y-2" data-testid="tracker-series-list">
           <h2 className="text-sm font-medium text-zinc-400">Series</h2>
           <ul className="space-y-2">
             {items.map((item) => {
@@ -350,6 +378,7 @@ export function TrackerClient() {
               return (
                 <li
                   key={item.id}
+                  data-testid={`tracker-series-${item.id}`}
                   className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800 px-3 py-2 text-sm"
                 >
                   <span
@@ -357,7 +386,9 @@ export function TrackerClient() {
                     style={{ backgroundColor: item.color }}
                     aria-hidden
                   />
-                  <span className="min-w-0 flex-1">{item.label}</span>
+                  <span className="min-w-0 flex-1" data-testid="tracker-series-label">
+                    {item.label}
+                  </span>
                   <span className="tabular-nums text-zinc-300">
                     {item.latestValue === null ? "—" : formatMoney(item.latestValue)}
                   </span>
@@ -368,6 +399,7 @@ export function TrackerClient() {
                   </span>
                   <button
                     type="button"
+                    data-testid={`tracker-hide-${item.id}`}
                     onClick={() => toggleVisibility(item.id, !item.isVisible)}
                     className="text-xs text-zinc-400 hover:text-white"
                   >
@@ -375,6 +407,7 @@ export function TrackerClient() {
                   </button>
                   <button
                     type="button"
+                    data-testid={`tracker-remove-${item.id}`}
                     onClick={() => removeSeries(item.id)}
                     className="text-xs text-red-400 hover:underline"
                   >

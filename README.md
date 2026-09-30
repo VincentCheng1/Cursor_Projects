@@ -68,7 +68,7 @@ The core value is `calculateRecentSalesAverage` — the most recent **qualifying
 
 ## Multi-card price tracker (Phase 12b)
 
-`/tracker` compares up to **8** COMBINED `PriceSnapshot` series on one Recharts overlay (`7D`–`ALL` ranges). Add cards by catalogue identity (card number, set, set type, foil, year) via `GET /api/cards/resolve`. Series persist in `TrackerSeries` (`GET/POST/PATCH/DELETE /api/tracker`, `GET /api/tracker/history`).
+`/tracker` compares up to **8** COMBINED `PriceSnapshot` series on one Recharts overlay (`7D`–`ALL` ranges). Add cards by catalogue identity (card number, set, set type, foil, year) via `GET /api/cards/resolve`. Year uses optional `CardVariant.printYear` when set, otherwise `Set.releaseDate` year (spec §30b). Series persist in `TrackerSeries` (`GET/POST/PATCH/DELETE /api/tracker`, `GET /api/tracker/history`).
 
 ## End-to-end tests (Phase 18)
 

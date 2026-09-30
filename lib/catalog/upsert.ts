@@ -181,6 +181,7 @@ export async function upsertCatalogVariants(
         data: {
           isFoil: variant.isFoil ?? false,
           isParallel: variant.isParallel ?? false,
+          ...(variant.printYear !== undefined ? { printYear: variant.printYear } : {}),
         },
       });
       return;
@@ -193,6 +194,7 @@ export async function upsertCatalogVariants(
         language,
         isFoil: variant.isFoil ?? false,
         isParallel: variant.isParallel ?? false,
+        printYear: variant.printYear ?? null,
       },
     });
   }
