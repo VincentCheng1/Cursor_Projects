@@ -9,7 +9,7 @@ import {
   type MoverCard,
   type MoverPeriod,
   type MoverWindow,
-} from "@/lib/dashboard/movers";
+} from "@/lib/dashboard/movers-shared";
 import { formatMoney } from "@/lib/pricing/money";
 
 const PERIOD_LABELS: Record<MoverPeriod, string> = {

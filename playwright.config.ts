@@ -16,7 +16,9 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run dev",
+    // Production server avoids Next/turbopack dev compile races (e.g. dashboard
+    // build-manifest ENOENT after login redirect). CI must `npm run build` first.
+    command: process.env.CI ? "npm run start" : "npm run dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
