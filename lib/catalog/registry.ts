@@ -1,7 +1,9 @@
 import { ebayIsConfigured } from "@/lib/ebay/config";
+import { tcgcsvServesTcgplayerSlot } from "@/lib/tcgcsv/config";
 import { tcgplayerIsConfigured } from "@/lib/tcgplayer/config";
 
 import { EbayPublicDataProvider } from "./providers/ebay";
+import { TcgCsvCatalogProvider } from "./providers/tcgcsv";
 import { TCGPlayerCatalogProvider } from "./providers/tcgplayer";
 import type { CatalogProvider } from "./types";
 
@@ -10,7 +12,9 @@ let cached: { TCGPLAYER: CatalogProvider; EBAY: CatalogProvider } | null = null;
 function loadCatalogProviders(): { TCGPLAYER: CatalogProvider; EBAY: CatalogProvider } {
   if (cached !== null) return cached;
   cached = {
-    TCGPLAYER: new TCGPlayerCatalogProvider(),
+    TCGPLAYER: tcgcsvServesTcgplayerSlot()
+      ? new TcgCsvCatalogProvider()
+      : new TCGPlayerCatalogProvider(),
     EBAY: new EbayPublicDataProvider(),
   };
   return cached;
@@ -26,7 +30,8 @@ export const catalogProviders = {
 };
 
 export function catalogProviderConfigured(id: "TCGPLAYER" | "EBAY"): boolean {
-  return id === "TCGPLAYER" ? tcgplayerIsConfigured() : ebayIsConfigured();
+  if (id === "EBAY") return ebayIsConfigured();
+  return tcgplayerIsConfigured() || tcgcsvServesTcgplayerSlot();
 }
 
 /** Test helper — clears provider singleton. */

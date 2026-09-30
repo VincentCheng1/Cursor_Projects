@@ -53,6 +53,9 @@ npm run lint
 | `TCGPLAYER_API_BASE` | No | Defaults to `https://api.tcgplayer.com` |
 | `TCGPLAYER_SALES_HISTORY_URL_TEMPLATE` | No | Authorized sales-history URL; `{productId}` replaced |
 | `TCGPLAYER_CATEGORY_MAP` | No | e.g. `pokemon:3,one-piece:68` for catalog category IDs |
+| `CARDVAULT_PRICE_SOURCE` | No | `tcgcsv` = public TCGCSV feeds; `tcgplayer` = force official API |
+| `TCGCSV_ENABLED` | No | `1`/`true` enables TCGCSV; `0`/`false` disables auto-fallback |
+| `TCGCSV_BASE_URL` | No | Defaults to `https://tcgcsv.com` |
 | `EBAY_CLIENT_ID` | With secret | eBay API credentials; leave blank to disable |
 | `EBAY_CLIENT_SECRET` | With id | eBay OAuth client secret |
 | `EBAY_ENVIRONMENT` | No | `production` (default) or `sandbox` |
@@ -84,9 +87,10 @@ Requires `DATABASE_URL` and `AUTH_SECRET` in `.env`, plus `prisma migrate deploy
 
 ## Marketplace integrations
 
-`TCGPlayerPriceProvider` and `EbayPriceProvider` implement a shared `PriceProvider` interface. Without valid credentials they remain disabled and report *integration not configured* — no fabricated prices.
+`TCGPlayerPriceProvider` / `TcgCsvPriceProvider` and `EbayPriceProvider` implement a shared `PriceProvider` interface. Without valid credentials (or TCGCSV enablement) they remain disabled and report *integration not configured* — no fabricated prices.
 
 - **TCGplayer**: OAuth client credentials against the official API; sales history uses `/pricing/product/{id}/sales` or `TCGPLAYER_SALES_HISTORY_URL_TEMPLATE` when your credential tier provides a different authorized endpoint.
+- **TCGCSV** (optional, no secrets): public daily JSON/CSV from [tcgcsv.com](https://tcgcsv.com) for catalog + market/mid **reference** prices. Does **not** supply completed sales for the 20-sale engine — see docs/tcgcsv-provider.md in the project store.
 - **eBay**: OAuth plus Finding API `findCompletedItems` with `SoldItemsOnly` — active listings are never used.
 
 ### Public data ingest (Phase 13a)

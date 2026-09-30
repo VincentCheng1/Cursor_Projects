@@ -21,6 +21,6 @@ export const SURFACE_DISPLAY_NAMES: Record<
 
 export const NOT_CONFIGURED_MESSAGES: Record<CatalogProviderId, string> = {
   TCGPLAYER:
-    "TCGplayer integration not configured. Set TCGPLAYER_CLIENT_ID and TCGPLAYER_CLIENT_SECRET.",
+    "TCGplayer integration not configured. Set TCGPLAYER_CLIENT_ID and TCGPLAYER_CLIENT_SECRET, or enable public TCGCSV with CARDVAULT_PRICE_SOURCE=tcgcsv (no secrets).",
   EBAY: "eBay integration not configured. Set EBAY_CLIENT_ID and EBAY_CLIENT_SECRET.",
 };
