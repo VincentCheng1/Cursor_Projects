@@ -61,12 +61,28 @@ test.describe("CardVault journey (spec §40)", () => {
     await page.goto("/collection");
     await expect(page.getByText(seed.cardName)).toBeVisible();
     const qtyLocator = page.locator('[data-testid^="collection-quantity-"]').first();
+    const qtyPatch = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/collection/") &&
+        res.request().method() === "PATCH" &&
+        res.ok(),
+    );
     await qtyLocator.locator("..").getByRole("button", { name: "+" }).click();
+    await qtyPatch;
     await expect(qtyLocator).toHaveText("2");
 
     const purchaseInput = page.locator('[data-testid^="purchase-price-"]').first();
+    const purchasePatch = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/collection/") &&
+        res.request().method() === "PATCH" &&
+        res.ok(),
+    );
     await purchaseInput.fill(String(purchasePricePerCopy));
     await purchaseInput.blur();
+    await purchasePatch;
+    // Confirm the bound value stuck before leaving the page (avoids profit=$value flake).
+    await expect(purchaseInput).toHaveValue(String(purchasePricePerCopy));
 
     await page.goto(`/cards/${seed.cardId}`);
     await page.getByTestId("refresh-price").click();

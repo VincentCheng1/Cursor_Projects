@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { getPrisma } from "@/lib/db/client";
+import { clearRefreshCooldowns } from "@/lib/pricing/rate-limit";
 import { MAX_TRACKER_SERIES } from "@/lib/tracker/constants";
 
 export const E2E_USER_EMAIL = "e2e@cardvault.test";
@@ -49,6 +50,8 @@ export async function seedE2EEnvironment(): Promise<E2ESeedResult> {
 
   await prisma.collectionItem.deleteMany({ where: { userId: user.id } });
   await prisma.trackerSeries.deleteMany({ where: { userId: user.id } });
+  // Retries reuse the same Next server process; drop in-memory refresh cool-downs.
+  clearRefreshCooldowns();
 
   const card = await prisma.card.findFirst({
     where: { name: "Charizard" },
