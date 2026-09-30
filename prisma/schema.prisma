@@ -1,0 +1,364 @@
+// CardVault database schema.
+//
+// Money is always stored as Decimal(12, 2) — never Float — so that financial values
+// survive a round-trip without floating point drift (spec §58).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/db/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Normalized card conditions, worst to best. Conditions are never merged (spec §9).
+enum Condition {
+  DAMAGED
+  HEAVILY_PLAYED
+  MODERATELY_PLAYED
+  LIGHTLY_PLAYED
+  NEAR_MINT
+}
+
+/// RAW means confidently ungraded. Unknown grading is represented by NULL, not RAW (spec §10).
+enum GradingCompany {
+  RAW
+  PSA
+  CGC
+  BGS
+  SGC
+  OTHER
+}
+
+enum SaleSource {
+  TCGPLAYER
+  EBAY
+}
+
+/// A snapshot can also record the combined cross-source value (spec §22).
+enum PriceSource {
+  TCGPLAYER
+  EBAY
+  COMBINED
+}
+
+enum SyncJobType {
+  SYNC_CARD_SALES
+  CALCULATE_CARD_PRICE
+  SNAPSHOT_PRICE
+  REFRESH_COLLECTION
+}
+
+enum SyncJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  /// Bcrypt hash for the credentials provider. Never returned to the client.
+  passwordHash  String?
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  collectionItems CollectionItem[]
+  watchlistItems  WatchlistItem[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Card catalogue
+// ---------------------------------------------------------------------------
+
+model Game {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  sets  CardSet[]
+  cards Card[]
+
+  @@map("games")
+}
+
+/// Named CardSet rather than Set so the generated TypeScript type does not shadow
+/// the global `Set`. The table is still called "sets".
+model CardSet {
+  id          String    @id @default(cuid())
+  gameId      String
+  name        String
+  code        String
+  releaseDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  game  Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@unique([gameId, code])
+  @@index([gameId])
+  @@index([name])
+  @@map("sets")
+}
+
+model Card {
+  id         String   @id @default(cuid())
+  gameId     String
+  setId      String
+  name       String
+  cardNumber String
+  rarity     String?
+  imageUrl   String?
+  /// e.g. { "tcgplayer": "12345", "ebay": "..." }
+  externalIds Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  game     Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  set      CardSet       @relation(fields: [setId], references: [id], onDelete: Cascade)
+  variants CardVariant[]
+
+  collectionItems CollectionItem[]
+  sales           Sale[]
+  priceSnapshots  PriceSnapshot[]
+  watchlistItems  WatchlistItem[]
+
+  @@unique([setId, cardNumber, name])
+  @@index([name])
+  @@index([cardNumber])
+  @@index([setId])
+  @@index([gameId])
+  @@index([rarity])
+  @@map("cards")
+}
+
+model CardVariant {
+  id          String   @id @default(cuid())
+  cardId      String
+  variantName String
+  printing    String?
+  language    String   @default("EN")
+  isFoil      Boolean  @default(false)
+  isParallel  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  collectionItems CollectionItem[]
+  sales           Sale[]
+  priceSnapshots  PriceSnapshot[]
+  watchlistItems  WatchlistItem[]
+
+  @@unique([cardId, variantName, printing, language])
+  @@index([cardId])
+  @@map("card_variants")
+}
+
+// ---------------------------------------------------------------------------
+// User collection
+// ---------------------------------------------------------------------------
+
+model CollectionItem {
+  id             String          @id @default(cuid())
+  userId         String
+  cardId         String
+  variantId      String?
+  condition      Condition
+  gradingCompany GradingCompany  @default(RAW)
+  grade          String?
+  quantity       Int             @default(1)
+  purchasePrice  Decimal?        @db.Decimal(12, 2)
+  purchaseDate   DateTime?
+  purchaseSource String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card    Card         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  variant CardVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, cardId])
+  @@index([cardId])
+  @@map("collection_items")
+}
+
+model WatchlistItem {
+  id          String   @id @default(cuid())
+  userId      String
+  cardId      String
+  variantId   String?
+  targetPrice Decimal? @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card    Card         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  variant CardVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, cardId, variantId])
+  @@index([userId])
+  @@map("watchlist_items")
+}
+
+// ---------------------------------------------------------------------------
+// Marketplace sales
+// ---------------------------------------------------------------------------
+
+/// A completed marketplace transaction. Active listings are never stored here (spec §14).
+model Sale {
+  id             String          @id @default(cuid())
+  source         SaleSource
+  externalSaleId String?
+  cardId         String?
+  variantId      String?
+  game           String?
+  cardName       String?
+  setName        String?
+  cardNumber     String?
+  condition      Condition?
+  language       String?
+  gradingCompany GradingCompany?
+  grade          String?
+  salePrice      Decimal         @db.Decimal(12, 2)
+  shippingPrice  Decimal?        @db.Decimal(12, 2)
+  totalPrice     Decimal?        @db.Decimal(12, 2)
+  currency       String          @default("USD")
+  saleDate       DateTime
+  listingTitle   String?
+  listingUrl     String?
+  sellerName     String?
+  imageUrl       String?
+  /// Untouched provider payload, kept so a calculation can always be audited.
+  rawData        Json?
+  /// Stable hash used to deduplicate sales that arrive without an externalSaleId (spec §17).
+  fingerprint    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  card    Card?        @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  variant CardVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([source, externalSaleId], name: "source_externalSaleId")
+  @@unique([source, fingerprint], name: "source_fingerprint")
+  @@index([cardId])
+  @@index([saleDate])
+  @@index([source])
+  // Supports "filter qualifying sales, ORDER BY saleDate DESC, LIMIT 20" (spec §49).
+  @@index([cardId, variantId, condition, gradingCompany, grade, saleDate])
+  @@map("sales")
+}
+
+// ---------------------------------------------------------------------------
+// Pricing output
+// ---------------------------------------------------------------------------
+
+model PriceSnapshot {
+  id             String          @id @default(cuid())
+  cardId         String
+  variantId      String?
+  source         PriceSource
+  condition      Condition?
+  gradingCompany GradingCompany?
+  grade          String?
+  currency       String          @default("USD")
+  averagePrice   Decimal?        @db.Decimal(12, 2)
+  medianPrice    Decimal?        @db.Decimal(12, 2)
+  minimumPrice   Decimal?        @db.Decimal(12, 2)
+  maximumPrice   Decimal?        @db.Decimal(12, 2)
+  salesUsed      Int
+  salesAvailable Int
+  oldestSaleDate DateTime?
+  newestSaleDate DateTime?
+  calculatedAt   DateTime        @default(now())
+
+  card    Card         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  variant CardVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([cardId])
+  @@index([calculatedAt])
+  @@index([cardId, variantId, source, calculatedAt])
+  @@map("price_snapshots")
+}
+
+model SyncJob {
+  id               String        @id @default(cuid())
+  provider         String
+  type             SyncJobType
+  status           SyncJobStatus @default(PENDING)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  recordsProcessed Int           @default(0)
+  recordsFailed    Int           @default(0)
+  errorMessage     String?
+  attempt          Int           @default(0)
+  createdAt        DateTime      @default(now())
+
+  @@index([provider, type, createdAt])
+  @@index([status])
+  @@map("sync_jobs")
+}
