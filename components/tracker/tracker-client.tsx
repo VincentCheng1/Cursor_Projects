@@ -370,7 +370,7 @@ export function TrackerClient() {
       </section>
 
       {items.length > 0 && (
-        <section className="space-y-2" data-testid="tracker-series-list">
+        <section className="space-y-2" data-testid="tracker-legend">
           <h2 className="text-sm font-medium text-zinc-400">Series</h2>
           <ul className="space-y-2">
             {items.map((item) => {
@@ -378,7 +378,7 @@ export function TrackerClient() {
               return (
                 <li
                   key={item.id}
-                  data-testid={`tracker-series-${item.id}`}
+                  data-testid={`tracker-series-row-${item.id}`}
                   className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800 px-3 py-2 text-sm"
                 >
                   <span

@@ -41,8 +41,6 @@ test.describe("CardVault journey (spec §40)", () => {
     const expectedProfit =
       expectations.average * quantity - purchasePricePerCopy * quantity;
 
-    page.on("dialog", (dialog) => dialog.accept());
-
     await signInPage(page, baseURL!, seed.email, seed.password);
     await expect(page.getByTestId("dashboard-collection-value")).toBeVisible();
 
@@ -55,7 +53,10 @@ test.describe("CardVault journey (spec §40)", () => {
     await page.goto("/search");
     await page.getByTestId("card-search-input").fill(seed.cardName);
     await page.getByTestId("card-search-submit").click();
+    // Handle the search "Added to collection." alert without racing navigation.
+    const addedDialog = page.waitForEvent("dialog");
     await page.getByTestId(`add-to-collection-${seed.cardId}`).click();
+    await (await addedDialog).accept();
 
     await page.goto("/collection");
     await expect(page.getByText(seed.cardName)).toBeVisible();

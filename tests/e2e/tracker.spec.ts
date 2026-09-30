@@ -47,7 +47,7 @@ test.describe("Multi-card price tracker (Phase 12b)", () => {
     await expect(page.getByTestId(`tracker-match-${first.cardId}`)).toBeVisible();
     await page.getByTestId(`tracker-add-${first.cardId}`).click();
 
-    await expect(page.getByTestId("tracker-series-list")).toBeVisible();
+    await expect(page.getByTestId("tracker-legend")).toBeVisible();
     await expect(page.getByTestId("tracker-series-label")).toContainText(first.cardName);
     await expect(page.getByTestId("tracker-series-label")).toContainText("1999");
     await expect(page.getByTestId("tracker-chart-ready")).toBeVisible({ timeout: 15_000 });
@@ -62,10 +62,10 @@ test.describe("Multi-card price tracker (Phase 12b)", () => {
       await expect(page.getByTestId("tracker-chart-ready")).toBeVisible({ timeout: 15_000 });
     }
 
-    const seriesRow = page.locator('[data-testid^="tracker-series-"]').first();
+    const seriesRow = page.locator('[data-testid^="tracker-series-row-"]').first();
     const seriesTestId = await seriesRow.getAttribute("data-testid");
     expect(seriesTestId).toBeTruthy();
-    const seriesId = seriesTestId!.replace("tracker-series-", "");
+    const seriesId = seriesTestId!.replace("tracker-series-row-", "");
     await page.getByTestId(`tracker-remove-${seriesId}`).click();
     await expect(page.getByTestId("tracker-empty")).toBeVisible();
 
@@ -78,7 +78,7 @@ test.describe("Multi-card price tracker (Phase 12b)", () => {
     }
 
     await page.goto("/tracker");
-    await expect(page.locator('[data-testid^="tracker-series-"]')).toHaveCount(
+    await expect(page.locator('[data-testid^="tracker-series-row-"]')).toHaveCount(
       seed.maxTrackerSeries,
     );
 
