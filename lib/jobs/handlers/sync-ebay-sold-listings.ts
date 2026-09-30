@@ -5,18 +5,25 @@ import { ebayFindCompletedSales } from "@/lib/ebay/finding";
 import { upsertSalesForCard } from "@/lib/pricing/persist/upsert-sales";
 import { ProviderNotConfiguredError } from "@/lib/pricing/providers/errors";
 import type { CardIdentifier } from "@/lib/pricing/types/card";
+import { tcaIsConfigured } from "@/lib/tca/config";
+import { tcaFindCompletedEbaySales } from "@/lib/tca/sales";
 
 /**
- * Pulls completed/sold listings for catalog cards via authorized Finding API (§14 / §14b).
- * Matching stays conservative — persistence skips unattributed rows (§16).
- * Never invents sales; active listings are never requested.
+ * Pulls completed/sold eBay comps for catalog cards (§14 / §14b).
+ *
+ * Prefer The Card API (`TCA_API_KEY`) Market `/sales?platform=ebay` when set;
+ * otherwise use the authorized eBay Finding API. Matching stays conservative —
+ * persistence skips unattributed rows (§16). Never invents sales; active
+ * listings are never requested.
  */
 export async function syncEbaySoldListings() {
-  if (!ebayIsConfigured()) {
+  const useTca = tcaIsConfigured();
+  const useEbayOauth = ebayIsConfigured();
+  if (!useTca && !useEbayOauth) {
     await markWatermarkError({
       provider: "EBAY",
       surface: "sold_listings",
-      message: "eBay integration not configured.",
+      message: "eBay sold comps not configured (set TCA_API_KEY or EBAY_CLIENT_ID/SECRET).",
     });
     throw new ProviderNotConfiguredError("eBay");
   }
@@ -56,7 +63,9 @@ export async function syncEbaySoldListings() {
       };
 
       try {
-        const sales = await ebayFindCompletedSales(identity, { limit: 50 });
+        const sales = useTca
+          ? await tcaFindCompletedEbaySales(identity, { limit: 50 })
+          : await ebayFindCompletedSales(identity, { limit: 50 });
         const result = await upsertSalesForCard(sales, card.id, variant?.id);
         processed += result.processed;
         failed += result.failed;
@@ -71,7 +80,7 @@ export async function syncEbaySoldListings() {
       surface: "sold_listings",
       rowCount: processed,
     });
-    return { processed, failed, errors };
+    return { processed, failed, errors, source: useTca ? "TCA" : "EBAY_FINDING" };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await markWatermarkError({

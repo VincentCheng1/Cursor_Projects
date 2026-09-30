@@ -1,4 +1,5 @@
 import { ebayIsConfigured } from "@/lib/ebay/config";
+import { tcaIsConfigured } from "@/lib/tca/config";
 import { tcgplayerIsConfigured } from "@/lib/tcgplayer/config";
 
 import { EBAY_SURFACES, TCGPLAYER_SURFACES } from "./surfaces";
@@ -10,9 +11,13 @@ export const MARKETPLACE_ENV_VARS = {
   EBAY: ["EBAY_CLIENT_ID", "EBAY_CLIENT_SECRET"] as const,
 } as const;
 
+/** Optional eBay sold-comps replacement via The Card API (names only). */
+export const TCA_ENV_VARS = ["TCA_API_KEY", "TCA_API_BASE"] as const;
+
 export type MarketplaceEnvVar =
   | (typeof MARKETPLACE_ENV_VARS.TCGPLAYER)[number]
   | (typeof MARKETPLACE_ENV_VARS.EBAY)[number]
+  | (typeof TCA_ENV_VARS)[number]
   | "EBAY_ENVIRONMENT"
   | "TCGPLAYER_API_BASE"
   | "TCGPLAYER_SALES_HISTORY_URL_TEMPLATE"
@@ -62,37 +67,86 @@ function missingRequired(vars: readonly string[]): string[] {
 }
 
 function providerReadiness(id: CatalogProviderId): ProviderReadiness {
-  const required =
-    id === "TCGPLAYER" ? MARKETPLACE_ENV_VARS.TCGPLAYER : MARKETPLACE_ENV_VARS.EBAY;
-  const configured = id === "TCGPLAYER" ? tcgplayerIsConfigured() : ebayIsConfigured();
-  const missingEnvVars = missingRequired(required);
-  const surfaces = id === "TCGPLAYER" ? TCGPLAYER_SURFACES : EBAY_SURFACES;
-  const displayName = id === "TCGPLAYER" ? "TCGplayer" : "eBay";
-
-  if (configured) {
+  if (id === "TCGPLAYER") {
+    const required = MARKETPLACE_ENV_VARS.TCGPLAYER;
+    const configured = tcgplayerIsConfigured();
+    const missingEnvVars = missingRequired(required);
+    if (configured) {
+      return {
+        id,
+        displayName: "TCGplayer",
+        configured: true,
+        requiredEnvVars: required,
+        missingEnvVars: [],
+        surfacesThatWouldRun: [...TCGPLAYER_SURFACES],
+        pricingReady: true,
+        catalogReady: true,
+        statusMessage:
+          "TCGplayer credentials are set. Catalog sync and sales refresh may run against authorized APIs only.",
+      };
+    }
     return {
       id,
-      displayName,
+      displayName: "TCGplayer",
+      configured: false,
+      requiredEnvVars: required,
+      missingEnvVars,
+      surfacesThatWouldRun: [],
+      pricingReady: false,
+      catalogReady: false,
+      statusMessage: `TCGplayer integration not configured. Set ${missingEnvVars.join(" and ")} in the server environment, then restart the app. No catalog or sales will be fetched until then.`,
+    };
+  }
+
+  // EBAY slot: OAuth covers catalog + Finding; TCA_API_KEY covers sold comps / pricing only.
+  const oauth = ebayIsConfigured();
+  const tca = tcaIsConfigured();
+  const configured = oauth || tca;
+  const required = MARKETPLACE_ENV_VARS.EBAY;
+  const missingEnvVars = oauth || tca ? [] : missingRequired(required);
+
+  if (oauth) {
+    return {
+      id,
+      displayName: "eBay",
       configured: true,
       requiredEnvVars: required,
       missingEnvVars: [],
-      surfacesThatWouldRun: [...surfaces],
+      surfacesThatWouldRun: [...EBAY_SURFACES],
       pricingReady: true,
       catalogReady: true,
-      statusMessage: `${displayName} credentials are set. Catalog sync and sales refresh may run against authorized APIs only.`,
+      statusMessage: tca
+        ? "eBay OAuth credentials are set (catalog). TCA_API_KEY is also set — sold comps prefer The Card API Market /sales."
+        : "eBay credentials are set. Catalog sync and sales refresh may run against authorized APIs only.",
+    };
+  }
+
+  if (tca) {
+    return {
+      id,
+      displayName: "eBay",
+      configured: true,
+      requiredEnvVars: ["TCA_API_KEY"],
+      missingEnvVars: [],
+      surfacesThatWouldRun: ["sold_listings"],
+      pricingReady: true,
+      catalogReady: false,
+      statusMessage:
+        "TCA_API_KEY is set (The Card API). eBay sold comps / pricing may refresh; taxonomy and catalog-links still need EBAY_CLIENT_ID and EBAY_CLIENT_SECRET.",
     };
   }
 
   return {
     id,
-    displayName,
+    displayName: "eBay",
     configured: false,
     requiredEnvVars: required,
     missingEnvVars,
     surfacesThatWouldRun: [],
     pricingReady: false,
     catalogReady: false,
-    statusMessage: `${displayName} integration not configured. Set ${missingEnvVars.join(" and ")} in the server environment, then restart the app. No catalog or sales will be fetched until then.`,
+    statusMessage:
+      "eBay sold comps not configured. Set TCA_API_KEY (The Card API) for completed eBay sales, or EBAY_CLIENT_ID and EBAY_CLIENT_SECRET for Finding + catalog.",
   };
 }
 
@@ -106,15 +160,18 @@ export function getSyncReadiness(): SyncReadiness {
   const surfacesSkipped: SyncReadiness["surfacesSkipped"] = [];
 
   for (const p of providers) {
-    const surfaces = p.id === "TCGPLAYER" ? TCGPLAYER_SURFACES : EBAY_SURFACES;
-    for (const surface of surfaces) {
-      if (p.configured) {
+    const allSurfaces = p.id === "TCGPLAYER" ? TCGPLAYER_SURFACES : EBAY_SURFACES;
+    const enabled = new Set(p.surfacesThatWouldRun);
+    for (const surface of allSurfaces) {
+      if (enabled.has(surface)) {
         surfacesEnabled.push({ provider: p.id, surface });
       } else {
         surfacesSkipped.push({
           provider: p.id,
           surface,
-          reason: p.statusMessage,
+          reason: p.configured
+            ? `${p.displayName} is configured for pricing/sold comps only; ${surface} needs full marketplace credentials.`
+            : p.statusMessage,
         });
       }
     }
