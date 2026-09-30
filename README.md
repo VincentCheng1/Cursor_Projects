@@ -56,7 +56,8 @@ npm run lint
 | `EBAY_CLIENT_ID` | With secret | eBay API credentials; leave blank to disable |
 | `EBAY_CLIENT_SECRET` | With id | eBay OAuth client secret |
 | `EBAY_ENVIRONMENT` | No | `production` (default) or `sandbox` |
-| `NEXT_PUBLIC_APP_URL` | Yes | Public app URL |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public app origin (no trailing slash). Local: `http://localhost:3000`. Production: `https://vinnystracker.com` |
+| `AUTH_URL` | Prod recommended | Auth.js canonical URL; set to the same origin as `NEXT_PUBLIC_APP_URL` in production |
 
 Secrets are server-side only and must never be exposed to the browser. Blank marketplace credentials **fail closed** — providers report not configured and never invent catalog rows or sales.
 
@@ -139,4 +140,4 @@ Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
 
 ## Security (Phase 17)
 
-Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `middleware.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed) include per-surface public-data coverage and the rate-limited sync control.
+Collection mutations enforce session user ownership (`updateMany` / `deleteMany` with `userId`). Security headers are set in `proxy.ts`. Admin diagnostics at `/admin/diagnostics` and `GET /api/admin/diagnostics` (no secrets exposed) include per-surface public-data coverage and the rate-limited sync control.
