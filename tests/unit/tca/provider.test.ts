@@ -118,9 +118,9 @@ describe("The Card API (TCA) eBay replacement", () => {
 
     const sales = await tcaFindCompletedEbaySales(card, { limit: 20 });
     expect(fetchMock).toHaveBeenCalled();
-    const firstCall = fetchMock.mock.calls.at(0);
-    expect(firstCall).toBeDefined();
-    const calledUrl = String(firstCall?.[0] ?? "");
+    const calls = fetchMock.mock.calls as unknown as Array<[unknown, ...unknown[]]>;
+    expect(calls.length).toBeGreaterThan(0);
+    const calledUrl = String(calls[0]?.[0] ?? "");
     expect(calledUrl).toContain("/sales");
     expect(calledUrl).toContain("platform=ebay");
     expect(JSON.stringify(sales)).not.toMatch(/tca_[0-9a-f]{8}/i);
@@ -163,5 +163,20 @@ describe("The Card API (TCA) eBay replacement", () => {
     } as TcaSaleRecord;
     expect(isTcaEbayCompletedSale(listingOnly)).toBe(false);
     expect(normalizeTcaEbaySale(listingOnly, card)).toBeNull();
+  });
+
+  it("rejects unconfirmed price_confirmed=false estimates", () => {
+    const unconfirmed: TcaSaleRecord = {
+      id: "ebay-unconfirmed",
+      platform: "eBay",
+      title: "Charizard Base Set 4/102 Holo",
+      sale_date: "2026-09-28",
+      sold_at: "2026-09-28T12:00:00Z",
+      price: 100,
+      currency: "USD",
+      price_confirmed: false,
+    };
+    expect(isTcaEbayCompletedSale(unconfirmed)).toBe(false);
+    expect(normalizeTcaEbaySale(unconfirmed, card)).toBeNull();
   });
 });

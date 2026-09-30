@@ -33,8 +33,8 @@ export function buildTcaSalesQuery(card: CardIdentifier): string | null {
 
 /** True when the sale row is a completed eBay transaction we may map to EBAY Sales.
  *
- * Gate (review P0): platform eBay + sale amount + sale date/timestamp.
- * Catalog / market-only / listing-without-sold fields must fail this check —
+ * Gate: platform eBay + sale amount + sale date/timestamp + `price_confirmed === true`.
+ * Catalog / market-only / listing-without-sold / unconfirmed estimates must fail —
  * never invent Sale rows from has_price or asking prices.
  */
 export function isTcaEbayCompletedSale(row: TcaSaleRecord): boolean {
@@ -43,6 +43,8 @@ export function isTcaEbayCompletedSale(row: TcaSaleRecord): boolean {
   if (row.price === null || row.price === undefined || row.price === "") return false;
   const when = row.sold_at ?? row.sale_date;
   if (when === null || when === undefined || String(when).trim() === "") return false;
+  // Fast-settle estimates flip to true within minutes; wait for confirmation.
+  if (row.price_confirmed !== true) return false;
   return true;
 }
 
