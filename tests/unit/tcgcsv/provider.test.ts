@@ -20,7 +20,7 @@ import {
 } from "@/lib/tcgcsv/parse";
 import type { TcgCsvProduct } from "@/lib/tcgcsv/types";
 import { ProviderNotConfiguredError } from "@/lib/pricing/providers/errors";
-import { resetPriceProviderCache } from "@/lib/pricing/providers/registry";
+import { resetPriceProviderCache, tcgplayerPriceSlotHealth } from "@/lib/pricing/providers/registry";
 import { TcgCsvPriceProvider } from "@/lib/pricing/providers/tcgcsv";
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), "../../fixtures/tcgcsv");
@@ -191,5 +191,20 @@ describe("TCGCSV config / providers", () => {
     expect(report.canRunPublicDataSync).toBe(true);
     expect(report.canRefreshPrices).toBe(false);
     expect(report.summary).toMatch(/TCGCSV/i);
+  });
+
+  it("price slot health is UNAVAILABLE for TCGCSV (never READY for sales)", () => {
+    vi.stubEnv("CARDVAULT_PRICE_SOURCE", "tcgcsv");
+    expect(tcgcsvServesTcgplayerSlot()).toBe(true);
+    expect(new TcgCsvPriceProvider().isConfigured()).toBe(true);
+
+    const health = tcgplayerPriceSlotHealth({ configured: true, usingTcgCsv: true });
+    expect(health.status).toBe("UNAVAILABLE");
+    if (health.status === "UNAVAILABLE") {
+      expect(health.message).toMatch(/no completed-sales|catalog\/reference only/i);
+    }
+    expect(tcgplayerPriceSlotHealth({ configured: true, usingTcgCsv: false }).status).toBe(
+      "READY",
+    );
   });
 });

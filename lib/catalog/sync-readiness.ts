@@ -198,7 +198,7 @@ export function getSyncReadiness(): SyncReadiness {
 
   if (canRunPublicDataSync) {
     nextSteps.push(
-      "As an admin, open /admin/diagnostics and confirm pricing providers show Ready.",
+      "As an admin, open /admin/diagnostics and confirm provider status (READY = sales pricing live; TCGCSV shows UNAVAILABLE for sales).",
     );
     nextSteps.push(
       'Click "Check sync readiness" (dry-run) to confirm which surfaces will run — no catalog writes.',
@@ -212,7 +212,7 @@ export function getSyncReadiness(): SyncReadiness {
       );
     }
     nextSteps.push(
-      "After catalog rows exist, refresh card prices via collection refresh or POST /api/sync with SNAPSHOT_PRICE / SYNC_CARD_SALES for specific cards.",
+      "After catalog rows exist, refresh card prices via collection refresh or POST /api/sync with SNAPSHOT_PRICE / SYNC_CARD_SALES for specific cards (requires a sales-capable provider).",
     );
   } else {
     nextSteps.push(
