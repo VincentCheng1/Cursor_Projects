@@ -24,6 +24,74 @@ async function main() {
     create: { name: "One Piece Card Game", slug: "one-piece" },
   });
 
+  const pokemon = await prisma.game.findUniqueOrThrow({ where: { slug: "pokemon" } });
+  const onePiece = await prisma.game.findUniqueOrThrow({ where: { slug: "one-piece" } });
+
+  const baseSet = await prisma.cardSet.upsert({
+    where: { gameId_code: { gameId: pokemon.id, code: "base1" } },
+    update: {},
+    create: {
+      gameId: pokemon.id,
+      name: "Base Set",
+      code: "base1",
+      releaseDate: new Date("1999-01-09"),
+    },
+  });
+
+  const op01 = await prisma.cardSet.upsert({
+    where: { gameId_code: { gameId: onePiece.id, code: "OP01" } },
+    update: {},
+    create: {
+      gameId: onePiece.id,
+      name: "Romance Dawn",
+      code: "OP01",
+      releaseDate: new Date("2022-07-08"),
+    },
+  });
+
+  const charizard = await prisma.card.upsert({
+    where: { setId_cardNumber_name: { setId: baseSet.id, cardNumber: "4/102", name: "Charizard" } },
+    update: {},
+    create: {
+      gameId: pokemon.id,
+      setId: baseSet.id,
+      name: "Charizard",
+      cardNumber: "4/102",
+      rarity: "Holo Rare",
+    },
+  });
+
+  await prisma.cardVariant.upsert({
+    where: {
+      cardId_variantName_printing_language: {
+        cardId: charizard.id,
+        variantName: "Holo",
+        printing: "Unlimited",
+        language: "EN",
+      },
+    },
+    update: {},
+    create: {
+      cardId: charizard.id,
+      variantName: "Holo",
+      printing: "Unlimited",
+      language: "EN",
+      isFoil: true,
+    },
+  });
+
+  await prisma.card.upsert({
+    where: { setId_cardNumber_name: { setId: op01.id, cardNumber: "OP01-001", name: "Monkey D. Luffy" } },
+    update: {},
+    create: {
+      gameId: onePiece.id,
+      setId: op01.id,
+      name: "Monkey D. Luffy",
+      cardNumber: "OP01-001",
+      rarity: "Leader",
+    },
+  });
+
   await pool.end();
   await prisma.$disconnect();
 }

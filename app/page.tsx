@@ -1,11 +1,13 @@
 import Link from "next/link";
 
+import { AppShell } from "@/components/layout/app-shell";
 import { listProviderStatus } from "@/lib/pricing/providers/registry";
 
 export default function HomePage() {
   const providers = listProviderStatus();
 
   return (
+    <AppShell>
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-16">
       <header>
         <p className="text-sm uppercase tracking-widest text-emerald-400">CardVault</p>
@@ -34,5 +36,6 @@ export default function HomePage() {
         <Link className="text-zinc-400 hover:underline" href="/dashboard">Dashboard</Link>
       </nav>
     </main>
+    </AppShell>
   );
 }
