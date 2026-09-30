@@ -64,3 +64,17 @@ The core value is `calculateRecentSalesAverage` — the most recent **qualifying
 ## Marketplace integrations
 
 `TCGPlayerPriceProvider` and `EbayPriceProvider` implement a shared `PriceProvider` interface. Without valid credentials they remain disabled and report *integration not configured* — no fabricated prices.
+
+- **TCGplayer**: OAuth client credentials against the official API; sales history uses `/pricing/product/{id}/sales` or `TCGPLAYER_SALES_HISTORY_URL_TEMPLATE` when your credential tier provides a different authorized endpoint.
+- **eBay**: OAuth plus Finding API `findCompletedItems` with `SoldItemsOnly` — active listings are never used.
+
+## Background jobs (Phase 15)
+
+Authenticated `POST /api/sync` runs `SyncJob` records with exponential backoff:
+
+- `SYNC_CARD_SALES` — fetch from configured providers and persist to `Sale`
+- `CALCULATE_CARD_PRICE` — run the engine (no snapshot)
+- `SNAPSHOT_PRICE` — refresh and write `PriceSnapshot` rows
+- `REFRESH_COLLECTION` — sync + snapshot for each collection item
+
+`GET /api/sync/{jobId}` returns job status. `GET /api/sync/providers` shows provider health and last successful sync.

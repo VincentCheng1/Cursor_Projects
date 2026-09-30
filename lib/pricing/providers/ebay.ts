@@ -1,3 +1,5 @@
+import { ebayFindCompletedSales } from "@/lib/ebay/finding";
+import { ebayIsConfigured } from "@/lib/ebay/config";
 import type { CardIdentifier } from "../types/card";
 import type {
   CardSearchOptions,
@@ -9,19 +11,13 @@ import type {
 import type { Sale } from "../types/sale";
 import { ProviderNotConfiguredError } from "./errors";
 
-function isConfigured(): boolean {
-  const id = process.env.EBAY_CLIENT_ID;
-  const secret = process.env.EBAY_CLIENT_SECRET;
-  return id !== undefined && id !== "" && secret !== undefined && secret !== "";
-}
-
-/** Production eBay provider — disabled until authorized credentials exist (spec §14). */
+/** Production eBay provider — completed/sold listings only (spec §14). */
 export class EbayPriceProvider implements PriceProvider {
   readonly id = "EBAY" as const;
   readonly displayName = "eBay";
 
   isConfigured(): boolean {
-    return isConfigured();
+    return ebayIsConfigured();
   }
 
   private assertConfigured(): void {
@@ -32,16 +28,17 @@ export class EbayPriceProvider implements PriceProvider {
 
   async searchCards(_query: string, _options?: CardSearchOptions): Promise<CardSearchResult[]> {
     this.assertConfigured();
+    // eBay is used for completed sales only; catalogue search stays in CardVault DB (§14).
     return [];
   }
 
-  async getCard(_externalCardId: string): Promise<ExternalCard | null> {
+  async getCard(externalCardId: string): Promise<ExternalCard | null> {
     this.assertConfigured();
-    return null;
+    return { externalCardId, name: externalCardId };
   }
 
-  async getRecentSales(_card: CardIdentifier, _options: SalesQueryOptions): Promise<Sale[]> {
+  async getRecentSales(card: CardIdentifier, options: SalesQueryOptions): Promise<Sale[]> {
     this.assertConfigured();
-    return [];
+    return ebayFindCompletedSales(card, options);
   }
 }

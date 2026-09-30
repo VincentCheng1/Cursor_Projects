@@ -19,6 +19,11 @@ export interface CardIdentifier {
   variantName?: string;
   printing?: string;
   language?: string;
+  /** Marketplace catalogue ids from Card.externalIds (not used in §16 matching). */
+  externalIds?: {
+    tcgplayer?: string;
+    ebay?: string;
+  };
 }
 
 /**

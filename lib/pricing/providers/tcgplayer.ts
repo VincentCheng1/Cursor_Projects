@@ -1,3 +1,10 @@
+import { getPrisma } from "@/lib/db/client";
+import {
+  tcgplayerFetchSalesHistory,
+  tcgplayerGetProduct,
+  tcgplayerSearchProducts,
+} from "@/lib/tcgplayer/client";
+import { tcgplayerIsConfigured } from "@/lib/tcgplayer/config";
 import type { CardIdentifier } from "../types/card";
 import type {
   CardSearchOptions,
@@ -9,19 +16,24 @@ import type {
 import type { Sale } from "../types/sale";
 import { ProviderNotConfiguredError } from "./errors";
 
-function isConfigured(): boolean {
-  const id = process.env.TCGPLAYER_CLIENT_ID;
-  const secret = process.env.TCGPLAYER_CLIENT_SECRET;
-  return id !== undefined && id !== "" && secret !== undefined && secret !== "";
+async function hydrateExternalIds(card: CardIdentifier): Promise<CardIdentifier> {
+  if (card.externalIds?.tcgplayer !== undefined || card.cardId === undefined) return card;
+  const row = await getPrisma().card.findUnique({
+    where: { id: card.cardId },
+    select: { externalIds: true },
+  });
+  if (row?.externalIds === null || row?.externalIds === undefined) return card;
+  const ids = row.externalIds as { tcgplayer?: string; ebay?: string };
+  return { ...card, externalIds: ids };
 }
 
-/** Production TCGplayer provider — disabled until authorized credentials exist (spec §12). */
+/** Production TCGplayer provider — authorized API only (spec §12–§13). */
 export class TCGPlayerPriceProvider implements PriceProvider {
   readonly id = "TCGPLAYER" as const;
   readonly displayName = "TCGplayer";
 
   isConfigured(): boolean {
-    return isConfigured();
+    return tcgplayerIsConfigured();
   }
 
   private assertConfigured(): void {
@@ -30,18 +42,40 @@ export class TCGPlayerPriceProvider implements PriceProvider {
     }
   }
 
-  async searchCards(_query: string, _options?: CardSearchOptions): Promise<CardSearchResult[]> {
+  async searchCards(query: string, options?: CardSearchOptions): Promise<CardSearchResult[]> {
     this.assertConfigured();
-    return [];
+    const results = await tcgplayerSearchProducts(query, options);
+    return results.map((p) => ({
+      externalCardId: String(p.productId ?? ""),
+      name: p.name ?? p.cleanName ?? "Unknown",
+      setName: p.groupName,
+      cardNumber: p.number,
+      rarity: p.rarity,
+      imageUrl: p.imageUrl,
+    }));
   }
 
-  async getCard(_externalCardId: string): Promise<ExternalCard | null> {
+  async getCard(externalCardId: string): Promise<ExternalCard | null> {
     this.assertConfigured();
-    return null;
+    const product = await tcgplayerGetProduct(externalCardId);
+    if (product === null || product === undefined) return null;
+    return {
+      externalCardId,
+      name: product.name ?? product.cleanName ?? "Unknown",
+      setName: product.groupName,
+      cardNumber: product.number,
+      rarity: product.rarity,
+      imageUrl: product.imageUrl,
+    };
   }
 
-  async getRecentSales(_card: CardIdentifier, _options: SalesQueryOptions): Promise<Sale[]> {
+  async getRecentSales(card: CardIdentifier, options: SalesQueryOptions): Promise<Sale[]> {
     this.assertConfigured();
-    return [];
+    const hydrated = await hydrateExternalIds(card);
+    const productId = hydrated.externalIds?.tcgplayer;
+    if (productId === undefined || productId === "") {
+      return [];
+    }
+    return tcgplayerFetchSalesHistory(productId, hydrated, options);
   }
 }
