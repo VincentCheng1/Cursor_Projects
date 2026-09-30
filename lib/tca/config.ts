@@ -10,8 +10,8 @@
 export const TCA_ENV_API_KEY = "TCA_API_KEY";
 export const TCA_ENV_API_BASE = "TCA_API_BASE";
 
-/** Default Market API base (paths like `/sales` are appended). */
-export const TCA_DEFAULT_API_BASE = "https://www.thecardapi.com/api/v1/market";
+/** Default Market API base (paths like `/sales` are appended). Apex redirects to www. */
+export const TCA_DEFAULT_API_BASE = "https://thecardapi.com/api/v1/market";
 
 export function tcaIsConfigured(): boolean {
   const key = process.env[TCA_ENV_API_KEY];

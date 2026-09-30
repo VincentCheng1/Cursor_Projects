@@ -118,7 +118,9 @@ describe("The Card API (TCA) eBay replacement", () => {
 
     const sales = await tcaFindCompletedEbaySales(card, { limit: 20 });
     expect(fetchMock).toHaveBeenCalled();
-    const calledUrl = String(fetchMock.mock.calls[0]![0]);
+    const firstCall = fetchMock.mock.calls.at(0);
+    expect(firstCall).toBeDefined();
+    const calledUrl = String(firstCall?.[0] ?? "");
     expect(calledUrl).toContain("/sales");
     expect(calledUrl).toContain("platform=ebay");
     expect(JSON.stringify(sales)).not.toMatch(/tca_[0-9a-f]{8}/i);
