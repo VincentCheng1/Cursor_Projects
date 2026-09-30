@@ -13,6 +13,7 @@ describe("sync readiness / dry-run", () => {
     vi.stubEnv("TCGPLAYER_CLIENT_SECRET", "");
     vi.stubEnv("EBAY_CLIENT_ID", "");
     vi.stubEnv("EBAY_CLIENT_SECRET", "");
+    vi.stubEnv("TCA_API_KEY", "");
 
     const report = getSyncReadiness();
     expect(report.dryRun).toBe(true);
@@ -41,6 +42,7 @@ describe("sync readiness / dry-run", () => {
     vi.stubEnv("TCGPLAYER_CLIENT_SECRET", "tcg-secret");
     vi.stubEnv("EBAY_CLIENT_ID", "");
     vi.stubEnv("EBAY_CLIENT_SECRET", "");
+    vi.stubEnv("TCA_API_KEY", "");
 
     const report = getSyncReadiness();
     expect(report.dryRun).toBe(true);
@@ -59,11 +61,31 @@ describe("sync readiness / dry-run", () => {
     expect(JSON.stringify(report)).not.toContain("tcg-id");
   });
 
+  it("TCA_API_KEY alone enables eBay sold_listings pricing surface (not taxonomy)", () => {
+    vi.stubEnv("TCGPLAYER_CLIENT_ID", "");
+    vi.stubEnv("TCGPLAYER_CLIENT_SECRET", "");
+    vi.stubEnv("EBAY_CLIENT_ID", "");
+    vi.stubEnv("EBAY_CLIENT_SECRET", "");
+    vi.stubEnv("TCA_API_KEY", "tca_REDACTED_TEST_KEY_NOT_REAL");
+
+    const report = getSyncReadiness();
+    expect(report.dryRun).toBe(true);
+    expect(report.canRefreshPrices).toBe(true);
+    const ebay = report.providers.find((p) => p.id === "EBAY");
+    expect(ebay?.configured).toBe(true);
+    expect(ebay?.pricingReady).toBe(true);
+    expect(ebay?.catalogReady).toBe(false);
+    expect(ebay?.surfacesThatWouldRun).toEqual(["sold_listings"]);
+    expect(report.surfacesEnabled).toEqual([{ provider: "EBAY", surface: "sold_listings" }]);
+    expect(JSON.stringify(report)).not.toContain("tca_REDACTED");
+  });
+
   it("syncPublicData still fail-closed without credentials (companion to dry-run)", async () => {
     vi.stubEnv("TCGPLAYER_CLIENT_ID", "");
     vi.stubEnv("TCGPLAYER_CLIENT_SECRET", "");
     vi.stubEnv("EBAY_CLIENT_ID", "");
     vi.stubEnv("EBAY_CLIENT_SECRET", "");
+    vi.stubEnv("TCA_API_KEY", "");
 
     const outcome = await syncPublicData();
     expect(outcome.processed).toBe(0);

@@ -1,0 +1,104 @@
+{
+  "data": [
+    {
+      "id": "ebay-111111111111",
+      "platform": "eBay",
+      "listing_type": "auction",
+      "title": "Pokemon Charizard Base Set 4/102 Holo Unlimited PSA 10",
+      "sale_date": "2026-09-28",
+      "sold_at": "2026-09-28T18:22:00Z",
+      "price": 412.5,
+      "original_price": null,
+      "currency": "USD",
+      "bids": 14,
+      "image_url": "https://example.invalid/image.jpg",
+      "thumbnail_url": "https://example.invalid/thumb.jpg",
+      "listing_url": "https://example.invalid/itm/111111111111",
+      "grade": "10",
+      "grader": "PSA",
+      "grading_company": "Professional Sports Authenticator",
+      "cert": "CERT_REDACTED",
+      "condition": null,
+      "price_confirmed": true,
+      "shipping_price": 0,
+      "category": null,
+      "card_set": null,
+      "card_number": null
+    },
+    {
+      "id": "ebay-222222222222",
+      "platform": "eBay",
+      "listing_type": "fixed_price",
+      "title": "Charizard Base Set 4/102 Unlimited Holo Rare NM",
+      "sale_date": "2026-09-27",
+      "sold_at": "2026-09-27T12:00:00Z",
+      "price": 340.0,
+      "currency": "USD",
+      "bids": null,
+      "image_url": "https://example.invalid/image2.jpg",
+      "thumbnail_url": "https://example.invalid/thumb2.jpg",
+      "listing_url": "https://example.invalid/itm/222222222222",
+      "grade": null,
+      "grader": null,
+      "grading_company": null,
+      "cert": null,
+      "condition": "Near Mint",
+      "price_confirmed": true,
+      "shipping_price": 4.99,
+      "category": null,
+      "card_set": null,
+      "card_number": null
+    },
+    {
+      "id": "ebay-333333333333",
+      "platform": "eBay",
+      "listing_type": "fixed_price",
+      "title": "Random binder lot of pokemon cards including energy",
+      "sale_date": "2026-09-26",
+      "sold_at": "2026-09-26T09:00:00Z",
+      "price": 25.0,
+      "currency": "USD",
+      "price_confirmed": true,
+      "shipping_price": null,
+      "grade": null,
+      "grader": null,
+      "condition": null,
+      "listing_url": "https://example.invalid/itm/333",
+      "image_url": null
+    },
+    {
+      "id": "tcgplayer-not-ebay",
+      "platform": "TCGplayer",
+      "listing_type": "fixed_price",
+      "title": "Charizard Base Set 4/102",
+      "sale_date": "2026-09-25",
+      "sold_at": "2026-09-25T10:00:00Z",
+      "price": 300.0,
+      "currency": "USD",
+      "price_confirmed": true
+    },
+    {
+      "id": "ebay-missing-price",
+      "platform": "eBay",
+      "title": "Charizard Base Set 4/102",
+      "sale_date": "2026-09-24",
+      "sold_at": "2026-09-24T10:00:00Z",
+      "price": null,
+      "currency": "USD",
+      "price_confirmed": false
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "page": 1,
+    "limit": 5,
+    "pages": 1,
+    "next_cursor": null
+  },
+  "meta": {
+    "platforms_covered": [
+      "eBay",
+      "TCGplayer"
+    ]
+  }
+}
