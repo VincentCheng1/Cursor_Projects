@@ -16,8 +16,15 @@ describe("mock provider guard §41", () => {
     expect(() => assertMockProviderEnvironment()).not.toThrow();
   });
 
-  it("refuses to load outside NODE_ENV=test", () => {
+  it("refuses to load outside test/e2e runtimes", () => {
     vi.stubEnv("NODE_ENV", "production");
-    expect(() => assertMockProviderEnvironment()).toThrow(/NODE_ENV=test/);
+    vi.stubEnv("CARDVAULT_E2E", "");
+    expect(() => assertMockProviderEnvironment()).toThrow(/test\/e2e/);
+  });
+
+  it("allows CARDVAULT_E2E=1 when not production", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CARDVAULT_E2E", "1");
+    expect(() => assertMockProviderEnvironment()).not.toThrow();
   });
 });

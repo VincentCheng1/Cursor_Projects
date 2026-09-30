@@ -22,8 +22,12 @@ export function ValueDisplay({
 
   return (
     <div>
-      <p className="text-4xl font-semibold tabular-nums">{formatMoney(value)}</p>
-      <p className="mt-2 text-sm text-zinc-400">Based on {salesUsed} recent sales</p>
+      <p className="text-4xl font-semibold tabular-nums" data-testid="current-value">
+        {formatMoney(value)}
+      </p>
+      <p className="mt-2 text-sm text-zinc-400" data-testid="sales-used-count">
+        Based on {salesUsed} recent sales
+      </p>
       {lastUpdated !== null && lastUpdated !== undefined && (
         <p className="mt-1 text-xs text-zinc-500">
           Last updated {new Date(lastUpdated).toLocaleString()}

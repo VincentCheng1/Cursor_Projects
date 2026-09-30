@@ -31,6 +31,7 @@ export function CardDetailActions({
     <div className="mt-4">
       <button
         type="button"
+        data-testid="refresh-price"
         onClick={refresh}
         className="rounded-lg border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-900"
       >

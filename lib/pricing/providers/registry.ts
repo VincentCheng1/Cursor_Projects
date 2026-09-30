@@ -1,16 +1,44 @@
+import type { PriceProvider } from "../types/provider";
 import type { ProviderStatus } from "../types/provider";
 import { EbayPriceProvider } from "./ebay";
+import { isMockProviderRuntime } from "./mock-env";
 import { TCGPlayerPriceProvider } from "./tcgplayer";
 
-const tcg = new TCGPlayerPriceProvider();
-const ebay = new EbayPriceProvider();
+let cached: { TCGPLAYER: PriceProvider; EBAY: PriceProvider } | null = null;
+
+function loadProviders(): { TCGPLAYER: PriceProvider; EBAY: PriceProvider } {
+  if (cached !== null) return cached;
+
+  if (isMockProviderRuntime()) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { MockTCGPlayerProvider } = require("./mock/tcgplayer") as typeof import("./mock/tcgplayer");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { MockEbayProvider } = require("./mock/ebay") as typeof import("./mock/ebay");
+    cached = {
+      TCGPLAYER: new MockTCGPlayerProvider(),
+      EBAY: new MockEbayProvider(),
+    };
+    return cached;
+  }
+
+  cached = {
+    TCGPLAYER: new TCGPlayerPriceProvider(),
+    EBAY: new EbayPriceProvider(),
+  };
+  return cached;
+}
 
 export const priceProviders = {
-  TCGPLAYER: tcg,
-  EBAY: ebay,
+  get TCGPLAYER() {
+    return loadProviders().TCGPLAYER;
+  },
+  get EBAY() {
+    return loadProviders().EBAY;
+  },
 };
 
 export function listProviderStatus(): ProviderStatus[] {
+  const { TCGPLAYER: tcg, EBAY: ebay } = loadProviders();
   return [
     {
       id: "TCGPLAYER",

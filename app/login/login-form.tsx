@@ -27,6 +27,7 @@ export function LoginForm() {
         <input
           type="email"
           required
+          data-testid="login-email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
@@ -38,13 +39,14 @@ export function LoginForm() {
           type="password"
           required
           minLength={8}
+          data-testid="login-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
         />
       </label>
       {error && <p className="text-sm text-red-400">{error}</p>}
-      <button type="submit" className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
+      <button type="submit" data-testid="login-submit" className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
         Sign in
       </button>
     </form>

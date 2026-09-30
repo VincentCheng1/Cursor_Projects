@@ -31,6 +31,7 @@ export function ViewSalesUsed({
     <div className="mt-6">
       <button
         type="button"
+        data-testid="view-sales-used"
         onClick={() => setOpen((v) => !v)}
         className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
       >
@@ -38,7 +39,7 @@ export function ViewSalesUsed({
       </button>
       {open && (
         <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
-          <table className="min-w-full text-left text-sm">
+          <table className="min-w-full text-left text-sm" data-testid="sales-used-table">
             <thead className="bg-zinc-900 text-zinc-400">
               <tr>
                 <th className="px-3 py-2">Date</th>
@@ -52,7 +53,7 @@ export function ViewSalesUsed({
             </thead>
             <tbody>
               {usedSales.map((s, i) => (
-                <tr key={i} className="border-t border-zinc-800">
+                <tr key={i} className="border-t border-zinc-800" data-testid="sales-used-row">
                   <td className="px-3 py-2">{new Date(s.saleDate).toLocaleDateString()}</td>
                   <td className="px-3 py-2">{s.source}</td>
                   <td className="px-3 py-2">{s.condition ?? "—"}</td>

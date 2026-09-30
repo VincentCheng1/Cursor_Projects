@@ -26,12 +26,13 @@ export function SearchClient() {
     setLoading(false);
   }
 
-  async function addToCollection(cardId: string) {
+  async function addToCollection(cardId: string, variantId?: string | null) {
     const res = await fetch("/api/collection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cardId,
+        variantId: variantId ?? null,
         condition: "NEAR_MINT",
         gradingCompany: "RAW",
         quantity: 1,
@@ -48,6 +49,7 @@ export function SearchClient() {
     <div className="space-y-4">
       <div className="flex gap-2">
         <input
+          data-testid="card-search-input"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
@@ -56,6 +58,7 @@ export function SearchClient() {
         />
         <button
           type="button"
+          data-testid="card-search-submit"
           onClick={search}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-white"
         >
@@ -79,7 +82,8 @@ export function SearchClient() {
             </div>
             <button
               type="button"
-              onClick={() => addToCollection(card.id)}
+              data-testid={`add-to-collection-${card.id}`}
+              onClick={() => addToCollection(card.id, card.variants[0]?.id)}
               className="text-sm text-emerald-400 hover:underline"
             >
               Add to collection

@@ -89,6 +89,15 @@ export function CollectionClient() {
     await load();
   }
 
+  async function updatePurchasePrice(id: string, purchasePrice: number) {
+    await fetch(`/api/collection/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ purchasePrice }),
+    });
+    await load();
+  }
+
   async function removeItem(id: string) {
     await fetch(`/api/collection/${id}`, { method: "DELETE" });
     await load();
@@ -222,7 +231,9 @@ export function CollectionClient() {
                 >
                   −
                 </button>
-                <span className="text-sm">{item.quantity}</span>
+                <span className="text-sm" data-testid={`collection-quantity-${item.id}`}>
+                  {item.quantity}
+                </span>
                 <button
                   type="button"
                   className="rounded border border-zinc-700 px-2"
@@ -238,6 +249,34 @@ export function CollectionClient() {
                   Delete
                 </button>
               </div>
+              <label className="mt-3 block text-xs text-zinc-500">
+                Purchase price (per copy)
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  data-testid={`purchase-price-${item.id}`}
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm tabular-nums"
+                  value={item.purchasePrice ?? ""}
+                  onChange={(e) => {
+                    const next = e.target.value === "" ? null : Number(e.target.value);
+                    if (next !== null && !Number.isFinite(next)) return;
+                    setItems((prev) =>
+                      prev.map((row) =>
+                        row.id === item.id
+                          ? { ...row, purchasePrice: next === null ? null : String(next) }
+                          : row,
+                      ),
+                    );
+                  }}
+                  onBlur={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") return;
+                    const n = Number(raw);
+                    if (Number.isFinite(n) && n >= 0) updatePurchasePrice(item.id, n);
+                  }}
+                />
+              </label>
             </article>
           ))}
         </div>

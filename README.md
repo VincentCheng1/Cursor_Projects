@@ -59,7 +59,18 @@ Secrets are server-side only and must never be exposed to the browser.
 
 The core value is `calculateRecentSalesAverage` — the most recent **qualifying** sales (up to 20) for an exact card, variant, condition, and grade. Combined headline value pools sales from all sources into **one** calculation (spec §22); it is not the mean of per-source averages.
 
-`MockTCGPlayerProvider` and `MockEbayProvider` load only when `NODE_ENV=test`.
+`MockTCGPlayerProvider` and `MockEbayProvider` load when `NODE_ENV=test` (Vitest) or when the dev server runs with `CARDVAULT_E2E=1` (Playwright). They never load in production.
+
+## End-to-end tests (Phase 18)
+
+Playwright starts `npm run dev` with `CARDVAULT_E2E=1` so mock providers are active. There is no public registration UI; `POST /api/e2e/seed` creates a credentials user (`e2e@cardvault.test`). `POST /api/e2e/pricing-expectations` returns the calculator oracle for assertions. Both routes return 404 without `CARDVAULT_E2E=1`.
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Requires `DATABASE_URL` and `AUTH_SECRET` in `.env`, plus `prisma migrate deploy` and `prisma db seed` (the e2e global setup runs these automatically).
 
 ## Marketplace integrations
 

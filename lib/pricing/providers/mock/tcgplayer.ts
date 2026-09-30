@@ -8,6 +8,7 @@ import type {
 } from "../../types/provider";
 import type { Sale } from "../../types/sale";
 import { assertMockProviderEnvironment } from "./guard";
+import { attachCardToSales } from "./attach-card";
 import { buildMockTcgSales } from "./fixtures";
 
 export class MockTCGPlayerProvider implements PriceProvider {
@@ -43,8 +44,8 @@ export class MockTCGPlayerProvider implements PriceProvider {
     };
   }
 
-  async getRecentSales(_card: CardIdentifier, options: SalesQueryOptions): Promise<Sale[]> {
+  async getRecentSales(card: CardIdentifier, options: SalesQueryOptions): Promise<Sale[]> {
     const limit = options.limit ?? 25;
-    return buildMockTcgSales(Math.min(limit, 25));
+    return attachCardToSales(buildMockTcgSales(Math.min(limit, 25)), card);
   }
 }

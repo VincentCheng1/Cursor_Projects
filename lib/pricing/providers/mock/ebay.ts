@@ -8,6 +8,7 @@ import type {
 } from "../../types/provider";
 import type { Sale } from "../../types/sale";
 import { assertMockProviderEnvironment } from "./guard";
+import { attachCardToSales } from "./attach-card";
 import { buildMockEbaySales } from "./fixtures";
 
 export class MockEbayProvider implements PriceProvider {
@@ -36,7 +37,7 @@ export class MockEbayProvider implements PriceProvider {
     return { externalCardId, name: "Charizard" };
   }
 
-  async getRecentSales(_card: CardIdentifier, _options: SalesQueryOptions): Promise<Sale[]> {
-    return buildMockEbaySales();
+  async getRecentSales(card: CardIdentifier, _options: SalesQueryOptions): Promise<Sale[]> {
+    return attachCardToSales(buildMockEbaySales(), card);
   }
 }

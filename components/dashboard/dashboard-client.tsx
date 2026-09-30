@@ -52,21 +52,36 @@ export function DashboardClient() {
     <div className="space-y-8">
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Collection value", value: formatMoney(data.collectionValue) },
-          { label: "Total invested", value: formatMoney(data.totalInvested) },
+          {
+            label: "Collection value",
+            testId: "dashboard-collection-value",
+            value: formatMoney(data.collectionValue),
+          },
+          {
+            label: "Total invested",
+            testId: "dashboard-total-invested",
+            value: formatMoney(data.totalInvested),
+          },
           {
             label: "Profit / loss",
+            testId: "dashboard-profit",
             value: formatMoney(data.profit),
             tone: data.profit >= 0 ? "text-emerald-400" : "text-red-400",
           },
           {
             label: "ROI",
+            testId: "dashboard-roi",
             value: data.roi === null ? "N/A" : `${data.roi.toFixed(2)}%`,
           },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
             <p className="text-xs text-zinc-500">{s.label}</p>
-            <p className={`mt-2 text-2xl font-semibold tabular-nums ${s.tone ?? ""}`}>{s.value}</p>
+            <p
+              data-testid={s.testId}
+              className={`mt-2 text-2xl font-semibold tabular-nums ${s.tone ?? ""}`}
+            >
+              {s.value}
+            </p>
           </div>
         ))}
       </section>
