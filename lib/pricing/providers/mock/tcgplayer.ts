@@ -7,6 +7,10 @@ import type {
   SalesQueryOptions,
 } from "../../types/provider";
 import type { Sale } from "../../types/sale";
+import {
+  filterSalesByQueryOptions,
+  takeRecentSales,
+} from "../../services/sale-query";
 import { assertMockProviderEnvironment } from "./guard";
 import { attachCardToSales } from "./attach-card";
 import { buildMockTcgSales } from "./fixtures";
@@ -45,7 +49,10 @@ export class MockTCGPlayerProvider implements PriceProvider {
   }
 
   async getRecentSales(card: CardIdentifier, options: SalesQueryOptions): Promise<Sale[]> {
+    // Oversample fixtures (includes recent non-qualifying), then filter before limit.
+    const all = attachCardToSales(buildMockTcgSales(40), card);
+    const filtered = filterSalesByQueryOptions(all, options);
     const limit = options.limit ?? 25;
-    return attachCardToSales(buildMockTcgSales(Math.min(limit, 25)), card);
+    return takeRecentSales(filtered, limit);
   }
 }

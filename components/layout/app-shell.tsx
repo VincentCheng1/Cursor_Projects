@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/" className="text-sm font-semibold text-emerald-400">
           CardVault
         </Link>
-        <nav className="mt-8 flex flex-col gap-2 text-sm">
+        <nav className="mt-8 flex flex-col gap-2 text-sm" aria-label="Primary">
           {links.map((l) => (
             <Link
               key={l.href}

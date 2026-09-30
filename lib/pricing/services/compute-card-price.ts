@@ -5,16 +5,23 @@ import { mapDbSaleToPricingSale } from "../mappers/db-sale";
 import { priceProviders } from "../providers/registry";
 import type { RefreshCardPriceResult } from "./refresh-card-price";
 import { buildMatchCriteria, type PricingIdentity } from "./match-criteria";
+import {
+  buildDbSaleWhere,
+  DB_SALE_FETCH_LIMIT,
+  PROVIDER_QUALIFYING_LIMIT,
+} from "./sale-query";
 
 /** Read-only pricing calculation (no snapshots). */
 export async function computeCardPrice(
   identity: PricingIdentity,
 ): Promise<Omit<RefreshCardPriceResult, "snapshotsWritten">> {
   const match = buildMatchCriteria(identity);
+  // Filter identity/condition/grading in SQL before LIMIT so mixed-condition
+  // history cannot starve the qualifying window (pricing-pipeline audit P1 #5).
   const rows = await getPrisma().sale.findMany({
-    where: { cardId: identity.card.id },
+    where: buildDbSaleWhere(identity),
     orderBy: { saleDate: "desc" },
-    take: 500,
+    take: DB_SALE_FETCH_LIMIT,
   });
   const dbSales = rows.map(mapDbSaleToPricingSale);
 
@@ -44,7 +51,8 @@ export async function computeCardPrice(
         gradingCompany: match.gradingCompany,
         grade: match.grade,
         language: match.language,
-        limit: 100,
+        // Providers filter by these options before applying this cap.
+        limit: PROVIDER_QUALIFYING_LIMIT,
       });
     } catch (e) {
       errors.push(`${provider.displayName}: ${e instanceof Error ? e.message : "unavailable"}`);

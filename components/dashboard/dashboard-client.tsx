@@ -6,6 +6,16 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recha
 
 import { formatMoney } from "@/lib/pricing/money";
 
+type Row = {
+  id: string;
+  cardId: string;
+  cardName: string;
+  profit: number | null;
+  currentCardValue: number | null;
+  purchasePrice: number | null;
+  quantity: number;
+};
+
 type Metrics = {
   collectionValue: number;
   totalInvested: number;
@@ -15,8 +25,56 @@ type Metrics = {
   uniqueCards: number;
   pokemonValue: number;
   onePieceValue: number;
+  topGainers: Row[];
+  topDecliners: Row[];
   withoutPricing: { id: string; cardName: string }[];
 };
+
+function MoverList({
+  title,
+  rows,
+  tone,
+  empty,
+}: {
+  title: string;
+  rows: Row[];
+  tone: "up" | "down";
+  empty: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-zinc-800 p-4" aria-labelledby={`${tone}-heading`}>
+      <h2 id={`${tone}-heading`} className="text-sm font-medium text-zinc-300">
+        {title}
+      </h2>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {rows.map((r) => {
+            const delta =
+              r.purchasePrice !== null && r.currentCardValue !== null
+                ? (r.currentCardValue - r.purchasePrice) * r.quantity
+                : r.profit;
+            return (
+              <li key={r.id} className="flex items-baseline justify-between gap-3 text-sm">
+                <Link href={`/cards/${r.cardId}`} className="truncate text-zinc-200 hover:text-emerald-400">
+                  {r.cardName}
+                </Link>
+                <span
+                  className={`shrink-0 tabular-nums ${
+                    tone === "up" ? "text-emerald-400" : "text-red-400"
+                  }`}
+                >
+                  {delta === null ? "—" : formatMoney(delta)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 export function DashboardClient() {
   const [data, setData] = useState<Metrics | null>(null);
@@ -37,11 +95,27 @@ export function DashboardClient() {
   if (error === "auth") {
     return (
       <p className="text-zinc-400">
-        <Link href="/login" className="text-emerald-400">Sign in</Link> to view your dashboard.
+        <Link href="/login" className="text-emerald-400">
+          Sign in
+        </Link>{" "}
+        to view your dashboard.
       </p>
     );
   }
-  if (!data) return <p className="text-zinc-400">Loading dashboard…</p>;
+  if (error === "load") {
+    return (
+      <p className="text-red-400" role="alert">
+        Could not load dashboard.
+      </p>
+    );
+  }
+  if (!data) {
+    return (
+      <p className="text-zinc-400" aria-live="polite">
+        Loading dashboard…
+      </p>
+    );
+  }
 
   const gameChart = [
     { game: "Pokémon", value: data.pokemonValue },
@@ -50,7 +124,7 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Collection summary">
         {[
           {
             label: "Collection value",
@@ -105,9 +179,26 @@ export function DashboardClient() {
         </div>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2" aria-label="Top movers">
+        <MoverList
+          title="Top gainers"
+          rows={data.topGainers ?? []}
+          tone="up"
+          empty="No gainers yet — add purchase prices to see profit movers."
+        />
+        <MoverList
+          title="Top decliners"
+          rows={data.topDecliners ?? []}
+          tone="down"
+          empty="No decliners yet — add purchase prices to see loss movers."
+        />
+      </section>
+
       {data.withoutPricing.length > 0 && (
-        <section className="rounded-2xl border border-zinc-800 p-4">
-          <h2 className="text-sm font-medium">Cards without pricing data</h2>
+        <section className="rounded-2xl border border-zinc-800 p-4" aria-labelledby="no-price-heading">
+          <h2 id="no-price-heading" className="text-sm font-medium">
+            Cards without pricing data
+          </h2>
           <ul className="mt-2 text-sm text-zinc-400">
             {data.withoutPricing.map((c) => (
               <li key={c.id}>{c.cardName}</li>

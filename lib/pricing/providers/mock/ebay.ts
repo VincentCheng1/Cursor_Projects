@@ -7,6 +7,10 @@ import type {
   SalesQueryOptions,
 } from "../../types/provider";
 import type { Sale } from "../../types/sale";
+import {
+  filterSalesByQueryOptions,
+  takeRecentSales,
+} from "../../services/sale-query";
 import { assertMockProviderEnvironment } from "./guard";
 import { attachCardToSales } from "./attach-card";
 import { buildMockEbaySales } from "./fixtures";
@@ -37,7 +41,10 @@ export class MockEbayProvider implements PriceProvider {
     return { externalCardId, name: "Charizard" };
   }
 
-  async getRecentSales(card: CardIdentifier, _options: SalesQueryOptions): Promise<Sale[]> {
-    return attachCardToSales(buildMockEbaySales(), card);
+  async getRecentSales(card: CardIdentifier, options: SalesQueryOptions): Promise<Sale[]> {
+    const all = attachCardToSales(buildMockEbaySales(), card);
+    const filtered = filterSalesByQueryOptions(all, options);
+    const limit = options.limit ?? 25;
+    return takeRecentSales(filtered, limit);
   }
 }

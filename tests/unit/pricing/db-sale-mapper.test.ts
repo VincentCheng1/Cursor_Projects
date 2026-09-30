@@ -54,6 +54,18 @@ describe("mapDbSaleToPricingSale", () => {
     expect(sale.listingTitle).toBe("Pikachu Base Set 58/102 NM");
   });
 
+  it("keeps eBay card identity but drops variantId that cannot be re-proven from title", () => {
+    const sale = mapDbSaleToPricingSale(
+      dbRow({
+        listingTitle: "Charizard Base Set 4/102 NM",
+        variantId: "var-reverse-holo",
+      }),
+    );
+    expect(sale.cardId).toBe("card-charizard");
+    expect(sale.cardName).toBe("Charizard");
+    expect(sale.variantId).toBeUndefined();
+  });
+
   it("preserves copiesCovered and isLot across the DB round-trip shape", () => {
     const sale = mapDbSaleToPricingSale(
       dbRow({

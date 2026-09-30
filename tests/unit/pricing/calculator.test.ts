@@ -10,7 +10,7 @@ import {
   calculateROI,
   calculateTotalCost,
 } from "@/lib/pricing/calculator/collectionValue";
-import { listingConfirmsCardIdentity } from "@/lib/pricing/normalizer/attributeListing";
+import { listingConfirmsCardIdentity, ebayIdentityFromListing, listingConfirmsVariantIdentity } from "@/lib/pricing/normalizer/attributeListing";
 import { normalizeCondition } from "@/lib/pricing/normalizer/normalizeCondition";
 import { normalizeCurrency } from "@/lib/pricing/normalizer/normalizeCurrency";
 import { normalizeEbaySale } from "@/lib/pricing/normalizer/normalizeSale";
@@ -237,6 +237,85 @@ describe("eBay listing attribution §16", () => {
         cardNumber: "4/102",
       }),
     ).toBe(false);
+  });
+
+  it("does not stamp requested variant/printing when the title lacks evidence", () => {
+    const reverseHoloRequest = {
+      ...CHARIZARD,
+      variantId: "var-reverse-holo",
+      variantName: "Reverse Holo",
+      printing: "Reverse Holo",
+    };
+
+    // Card-level evidence only — no Reverse Holo phrase.
+    const identity = ebayIdentityFromListing(
+      { title: "Charizard Base Set 4/102 NM" },
+      reverseHoloRequest,
+    );
+    expect(identity.cardId).toBe("card-charizard");
+    expect(identity.cardName).toBe("Charizard");
+    expect(identity.variantId).toBeUndefined();
+    expect(identity.variantName).toBeUndefined();
+    expect(identity.printing).toBeUndefined();
+    expect(
+      listingConfirmsVariantIdentity("Charizard Base Set 4/102 NM", {
+        variantName: "Reverse Holo",
+        printing: "Reverse Holo",
+      }),
+    ).toBe(false);
+
+    const sale = normalizeEbaySale(
+      {
+        itemId: "ebay-non-holo",
+        title: "Charizard Base Set 4/102 NM",
+        price: { value: 55, currency: "USD" },
+        lastSoldDate: "2026-09-15T12:00:00Z",
+        condition: "Near Mint",
+      },
+      reverseHoloRequest,
+    );
+    expect(sale).not.toBeNull();
+    expect(sale!.cardId).toBe("card-charizard");
+    expect(sale!.variantId).toBeUndefined();
+    expect(sale!.variantName).toBeUndefined();
+    expect(sale!.printing).toBeUndefined();
+
+    const match = {
+      cardId: "card-charizard",
+      variantId: "var-reverse-holo",
+      variantName: "Reverse Holo",
+      printing: "Reverse Holo",
+      cardName: "Charizard",
+      setName: "Base Set",
+      cardNumber: "4/102",
+      condition: "NEAR_MINT" as const,
+      gradingCompany: "RAW" as const,
+    };
+    const { qualifying } = filterQualifyingSales([sale!], {
+      match,
+      currency: "USD",
+      now: TEST_NOW,
+    });
+    expect(qualifying).toHaveLength(0);
+
+    const confirmed = normalizeEbaySale(
+      {
+        itemId: "ebay-reverse",
+        title: "Charizard Base Set 4/102 Reverse Holo NM",
+        price: { value: 80, currency: "USD" },
+        lastSoldDate: "2026-09-16T12:00:00Z",
+        condition: "Near Mint",
+      },
+      reverseHoloRequest,
+    );
+    expect(confirmed!.variantId).toBe("var-reverse-holo");
+    expect(confirmed!.variantName).toBe("Reverse Holo");
+    const ok = filterQualifyingSales([confirmed!], {
+      match,
+      currency: "USD",
+      now: TEST_NOW,
+    });
+    expect(ok.qualifying).toHaveLength(1);
   });
 });
 

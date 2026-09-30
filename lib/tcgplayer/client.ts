@@ -6,6 +6,10 @@ import {
   normalizeTCGPlayerSale,
   type TCGPlayerSalesHistoryRecord,
 } from "@/lib/pricing/normalizer/normalizeSale";
+import {
+  filterSalesByQueryOptions,
+  takeRecentSales,
+} from "@/lib/pricing/services/sale-query";
 
 import { tcgplayerRequest } from "./http";
 import { tcgplayerSalesHistoryUrl } from "./config";
@@ -65,8 +69,21 @@ export async function tcgplayerGetProduct(productId: string) {
 export async function tcgplayerFetchSalesHistory(
   productId: string,
   card: CardIdentifier,
-  _options: SalesQueryOptions,
+  options: SalesQueryOptions,
 ): Promise<Sale[]> {
+  const context = {
+    cardId: card.cardId,
+    variantId: card.variantId,
+    game: card.game,
+    cardName: card.cardName,
+    setName: card.setName,
+    setCode: card.setCode,
+    cardNumber: card.cardNumber,
+    variantName: card.variantName,
+    printing: card.printing,
+    language: card.language,
+  };
+
   const customUrl = tcgplayerSalesHistoryUrl(productId);
   if (customUrl !== null) {
     try {
@@ -75,22 +92,10 @@ export async function tcgplayerFetchSalesHistory(
         customUrl,
       );
       const rows = Array.isArray(payload) ? payload : payload.results ?? [];
-      return rows
-        .map((row) =>
-          normalizeTCGPlayerSale(row, {
-            cardId: card.cardId,
-            variantId: card.variantId,
-            game: card.game,
-            cardName: card.cardName,
-            setName: card.setName,
-            setCode: card.setCode,
-            cardNumber: card.cardNumber,
-            variantName: card.variantName,
-            printing: card.printing,
-            language: card.language,
-          }),
-        )
+      const sales = rows
+        .map((row) => normalizeTCGPlayerSale(row, context))
         .filter((s): s is Sale => s !== null);
+      return limitAfterFilter(sales, options);
     } catch {
       return [];
     }
@@ -102,23 +107,18 @@ export async function tcgplayerFetchSalesHistory(
       results?: TCGPlayerSalesHistoryRecord[];
     }>("getRecentSales", `/pricing/product/${productId}/sales`);
     const rows = data.results ?? [];
-    return rows
-      .map((row) =>
-        normalizeTCGPlayerSale(row, {
-          cardId: card.cardId,
-          variantId: card.variantId,
-          game: card.game,
-          cardName: card.cardName,
-          setName: card.setName,
-          setCode: card.setCode,
-          cardNumber: card.cardNumber,
-          variantName: card.variantName,
-          printing: card.printing,
-          language: card.language,
-        }),
-      )
+    const sales = rows
+      .map((row) => normalizeTCGPlayerSale(row, context))
       .filter((s): s is Sale => s !== null);
+    return limitAfterFilter(sales, options);
   } catch {
     return [];
   }
+}
+
+/** Filter by condition/grading/language first, then apply the caller limit. */
+function limitAfterFilter(sales: Sale[], options: SalesQueryOptions): Sale[] {
+  const filtered = filterSalesByQueryOptions(sales, options);
+  const limit = options.limit ?? 100;
+  return takeRecentSales(filtered, limit);
 }

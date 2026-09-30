@@ -66,24 +66,39 @@ export function PriceHistoryChart({
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-zinc-300">Price history</h3>
-        <div className="flex gap-1">
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => loadRange(r)}
-              className={`rounded px-2 py-1 text-xs ${
-                range === r ? "bg-emerald-600 text-white" : "bg-zinc-800 text-zinc-400"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1" role="group" aria-label="History range">
+            {RANGES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => loadRange(r)}
+                aria-pressed={range === r}
+                className={`rounded px-2 py-1 text-xs ${
+                  range === r ? "bg-emerald-600 text-white" : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <a
+            href={`/price-history?cardId=${encodeURIComponent(cardId)}${
+              variantId ? `&variantId=${encodeURIComponent(variantId)}` : ""
+            }${condition ? `&condition=${encodeURIComponent(condition)}` : ""}${
+              gradingCompany ? `&gradingCompany=${encodeURIComponent(gradingCompany)}` : ""
+            }${grade ? `&grade=${encodeURIComponent(grade)}` : ""}&range=${range}`}
+            className="text-xs text-emerald-400 hover:underline"
+          >
+            Open full page
+          </a>
         </div>
       </div>
       <div className="mt-4 h-64">
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <p className="text-sm text-zinc-500" aria-live="polite">
+            Loading…
+          </p>
         ) : chartData.length === 0 ? (
           <p className="text-sm text-zinc-500">No price history for this range yet.</p>
         ) : (

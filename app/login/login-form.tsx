@@ -21,12 +21,13 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-6 space-y-4">
+    <form onSubmit={onSubmit} className="mt-6 space-y-4" aria-label="Sign in">
       <label className="block text-sm">
         Email
         <input
           type="email"
           required
+          autoComplete="email"
           data-testid="login-email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -39,13 +40,18 @@ export function LoginForm() {
           type="password"
           required
           minLength={8}
+          autoComplete="current-password"
           data-testid="login-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
         />
       </label>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
       <button type="submit" data-testid="login-submit" className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
         Sign in
       </button>

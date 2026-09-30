@@ -41,6 +41,11 @@ export type AttributionFields = Pick<
   "cardName" | "setName" | "setCode" | "cardNumber"
 >;
 
+export type VariantAttributionFields = Pick<
+  CardIdentifier,
+  "variantName" | "printing"
+>;
+
 /**
  * Whether listing evidence confidently belongs to the expected card.
  *
@@ -83,18 +88,82 @@ export function listingConfirmsCardIdentity(
 }
 
 /**
+ * Whether listing evidence supports the requested variant / printing slice.
+ *
+ * Every requested variantName and printing must appear as phrases in the title.
+ * If the request names a variant/printing and the title is silent, refuse —
+ * do not stamp the request onto the sale (spec §16).
+ */
+export function listingConfirmsVariantIdentity(
+  evidence: ListingEvidence | string | null | undefined,
+  expected: VariantAttributionFields,
+): boolean {
+  const title =
+    typeof evidence === "string" || evidence === null || evidence === undefined
+      ? normalizeText(evidence)
+      : normalizeText(evidence.title);
+  if (title === undefined) return false;
+
+  const variantName = normalizeText(expected.variantName);
+  const printing = normalizeText(expected.printing);
+
+  // Nothing variant-specific to prove → nothing to confirm.
+  if (variantName === undefined && printing === undefined) return true;
+
+  if (variantName !== undefined && !containsPhrase(title, variantName)) {
+    return false;
+  }
+  if (printing !== undefined && !containsPhrase(title, printing)) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Identity context safe to stamp onto an eBay sale.
  *
- * When evidence confirms the requested card, return the full CardVault context
- * (including `cardId`). Otherwise return an empty identity so matching excludes
- * the row and persistence cannot forge a foreign key (spec §5, §16).
+ * Card-level fields (`cardId`, name, set, number) require listing confirmation.
+ * Variant / printing / variantId are stamped only when the title also evidences
+ * those phrases. Otherwise card-level identity may still be returned without
+ * variant fields so §16 matching excludes the row from a variant-scoped average
+ * instead of silently accepting a forged printing.
  */
 export function ebayIdentityFromListing(
   evidence: ListingEvidence,
   requested: CardIdentifier,
 ): CardIdentifier {
-  if (listingConfirmsCardIdentity(evidence, requested)) {
-    return requested;
+  if (!listingConfirmsCardIdentity(evidence, requested)) {
+    return {};
   }
-  return {};
+
+  const cardLevel: CardIdentifier = {
+    cardId: requested.cardId,
+    game: requested.game,
+    cardName: requested.cardName,
+    setName: requested.setName,
+    setCode: requested.setCode,
+    cardNumber: requested.cardNumber,
+    language: requested.language,
+  };
+
+  const wantsVariant =
+    normalizeText(requested.variantName) !== undefined ||
+    normalizeText(requested.printing) !== undefined ||
+    (requested.variantId !== undefined && requested.variantId.trim() !== "");
+
+  if (!wantsVariant) {
+    return cardLevel;
+  }
+
+  if (!listingConfirmsVariantIdentity(evidence, requested)) {
+    // Card confirmed, variant not — refuse to stamp the requested printing.
+    return cardLevel;
+  }
+
+  return {
+    ...cardLevel,
+    variantId: requested.variantId,
+    variantName: requested.variantName,
+    printing: requested.printing,
+  };
 }

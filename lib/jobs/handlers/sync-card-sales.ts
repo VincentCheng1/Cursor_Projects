@@ -1,4 +1,5 @@
 import { buildMatchCriteria, type PricingIdentity } from "@/lib/pricing/services/match-criteria";
+import { PROVIDER_QUALIFYING_LIMIT } from "@/lib/pricing/services/sale-query";
 import { upsertSalesForCard } from "@/lib/pricing/persist/upsert-sales";
 import { priceProviders } from "@/lib/pricing/providers/registry";
 
@@ -21,7 +22,7 @@ export async function syncCardSales(identity: PricingIdentity) {
         gradingCompany: match.gradingCompany,
         grade: match.grade,
         language: match.language,
-        limit: 100,
+        limit: PROVIDER_QUALIFYING_LIMIT,
       });
       const result = await upsertSalesForCard(
         sales,

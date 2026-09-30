@@ -10,8 +10,12 @@ import type { Sale } from "../types/sale";
  * Only sales already attributed to `cardId` are written. Keyword hits that failed
  * conservative listing attribution (no `cardId`, or a different one) are skipped
  * so persistence cannot forge CardVault identity (spec §5, §16).
+ *
+ * `variantId` is taken from the sale only — never from the caller's requested
+ * identity — so eBay keyword hits that confirmed the card but not the printing
+ * do not get a forged variant FK.
  */
-export async function upsertSalesForCard(sales: Sale[], cardId: string, variantId?: string) {
+export async function upsertSalesForCard(sales: Sale[], cardId: string, _variantId?: string) {
   let processed = 0;
   let failed = 0;
   const prisma = getPrisma();
@@ -37,7 +41,7 @@ export async function upsertSalesForCard(sales: Sale[], cardId: string, variantI
 
       const data = {
         cardId: sale.cardId,
-        variantId: variantId ?? sale.variantId ?? null,
+        variantId: sale.variantId ?? null,
         game: sale.game ?? null,
         cardName: sale.cardName ?? null,
         setName: sale.setName ?? null,

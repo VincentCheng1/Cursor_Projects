@@ -52,17 +52,21 @@ export function mapDbSaleToPricingSale(row: DbSale): Sale {
     cardNumber: row.cardNumber ?? undefined,
   });
 
-  if (confirmed) {
-    return base;
+  if (!confirmed) {
+    return {
+      ...base,
+      cardId: undefined,
+      variantId: undefined,
+      game: undefined,
+      cardName: undefined,
+      setName: undefined,
+      cardNumber: undefined,
+    };
   }
 
-  return {
-    ...base,
-    cardId: undefined,
-    variantId: undefined,
-    game: undefined,
-    cardName: undefined,
-    setName: undefined,
-    cardNumber: undefined,
-  };
+  // Sale rows do not persist variantName/printing, so we cannot re-prove a
+  // variant stamp from the title alone. Drop eBay variantId on remap — the
+  // live normalizer only stamps variant when the title evidences it, and
+  // variant-scoped averages refuse sales with unknown variant (spec §16).
+  return { ...base, variantId: undefined };
 }

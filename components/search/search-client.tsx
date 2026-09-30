@@ -47,26 +47,40 @@ export function SearchClient() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <form
+        className="flex gap-2"
+        role="search"
+        aria-label="Card search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void search();
+        }}
+      >
+        <label className="sr-only" htmlFor="card-search-input">
+          Search cards
+        </label>
         <input
+          id="card-search-input"
           data-testid="card-search-input"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && search()}
           placeholder="Charizard, OP01-001…"
           className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
         />
         <button
-          type="button"
+          type="submit"
           data-testid="card-search-submit"
-          onClick={search}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-white"
         >
           Search
         </button>
-      </div>
-      {loading && <p className="text-sm text-zinc-500">Searching…</p>}
-      <ul className="space-y-3">
+      </form>
+      {loading && (
+        <p className="text-sm text-zinc-500" aria-live="polite">
+          Searching…
+        </p>
+      )}
+      <ul className="space-y-3" aria-label="Search results">
         {results.map((card) => (
           <li
             key={card.id}
@@ -92,7 +106,9 @@ export function SearchClient() {
         ))}
       </ul>
       {!loading && q && results.length === 0 && (
-        <p className="text-sm text-zinc-500">No results. Try another query or seed the catalog.</p>
+        <p className="text-sm text-zinc-500" role="status">
+          No results. Try another query or seed the catalog.
+        </p>
       )}
     </div>
   );

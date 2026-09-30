@@ -67,14 +67,14 @@ The core value is `calculateRecentSalesAverage` — the most recent **qualifying
 
 ## End-to-end tests (Phase 18)
 
-Playwright starts `npm run dev` with `CARDVAULT_E2E=1` so mock providers are active. There is no public registration UI; `POST /api/e2e/seed` creates a credentials user (`e2e@cardvault.test`). `POST /api/e2e/pricing-expectations` returns the calculator oracle for assertions. Both routes return 404 without `CARDVAULT_E2E=1`.
+Playwright starts `npm run dev` with `CARDVAULT_E2E=1` so mock providers are active. Create an account at `/register` (or `POST /api/auth/register`), or use `POST /api/e2e/seed` for the credentials user (`e2e@cardvault.test`). `POST /api/e2e/pricing-expectations` returns the calculator oracle for assertions. E2E seed/oracle routes return 404 without `CARDVAULT_E2E=1`.
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-Requires `DATABASE_URL` and `AUTH_SECRET` in `.env`, plus `prisma migrate deploy` and `prisma db seed` (the e2e global setup runs these automatically).
+Requires `DATABASE_URL` and `AUTH_SECRET` in `.env`, plus `prisma migrate deploy` and `prisma db seed` (the e2e global setup runs these automatically). GitHub Actions (`.github/workflows/ci.yml`) runs unit tests and Playwright against a Postgres service.
 
 ## Marketplace integrations
 

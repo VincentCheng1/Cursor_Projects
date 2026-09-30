@@ -4,6 +4,11 @@ import type { CardIdentifier } from "@/lib/pricing/types/card";
 import type { SalesQueryOptions } from "@/lib/pricing/types/provider";
 import type { Sale } from "@/lib/pricing/types/sale";
 import { normalizeEbaySale, type EbaySoldItemRecord } from "@/lib/pricing/normalizer/normalizeSale";
+import {
+  EBAY_MAX_FETCH_PAGES,
+  filterSalesByQueryOptions,
+  takeRecentSales,
+} from "@/lib/pricing/services/sale-query";
 
 import { ebayFindingBase } from "./config";
 
@@ -20,15 +25,45 @@ function buildKeywords(card: CardIdentifier): string {
 /**
  * Completed listings via eBay Finding API `findCompletedItems` (spec §14).
  * Active listings are never requested.
+ *
+ * Pages until enough rows match the sales-query filters (condition/grading/…)
+ * or pages are exhausted — filter before the caller limit.
  */
 export async function ebayFindCompletedSales(
   card: CardIdentifier,
   options: SalesQueryOptions,
 ): Promise<Sale[]> {
-  await waitForProviderSlot("EBAY");
-  const started = Date.now();
   const keywords = buildKeywords(card);
   if (keywords.trim() === "") return [];
+
+  const qualifyingLimit = options.limit ?? 50;
+  const pageSize = 100;
+  const collected: Sale[] = [];
+
+  for (let page = 1; page <= EBAY_MAX_FETCH_PAGES; page += 1) {
+    const pageSales = await fetchFindingPage(card, keywords, page, pageSize);
+    if (pageSales.length === 0) break;
+    collected.push(...pageSales);
+
+    const matching = filterSalesByQueryOptions(collected, options);
+    if (matching.length >= qualifyingLimit) {
+      return takeRecentSales(matching, qualifyingLimit);
+    }
+    // Finding returns fewer than a full page → no further pages.
+    if (pageSales.length < pageSize) break;
+  }
+
+  return takeRecentSales(filterSalesByQueryOptions(collected, options), qualifyingLimit);
+}
+
+async function fetchFindingPage(
+  card: CardIdentifier,
+  keywords: string,
+  pageNumber: number,
+  entriesPerPage: number,
+): Promise<Sale[]> {
+  await waitForProviderSlot("EBAY");
+  const started = Date.now();
 
   const params = new URLSearchParams({
     "OPERATION-NAME": "findCompletedItems",
@@ -37,7 +72,8 @@ export async function ebayFindCompletedSales(
     "RESPONSE-DATA-FORMAT": "JSON",
     "REST-PAYLOAD": "",
     keywords,
-    "paginationInput.entriesPerPage": String(Math.min(options.limit ?? 50, 100)),
+    "paginationInput.entriesPerPage": String(entriesPerPage),
+    "paginationInput.pageNumber": String(pageNumber),
     "itemFilter(0).name": "SoldItemsOnly",
     "itemFilter(0).value": "true",
   });
